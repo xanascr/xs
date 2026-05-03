@@ -1,0 +1,7 @@
+PARTIU()
+
+CRIA home = OUVE AQUI("HOME")
+
+SOLTA O GRITO(home)
+
+ACABOU()

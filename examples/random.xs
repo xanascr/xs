@@ -1,0 +1,7 @@
+PARTIU()
+
+CRIA n = SORTEIA(1, 100)
+
+SOLTA O GRITO(n)
+
+ACABOU()

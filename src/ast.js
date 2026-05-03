@@ -1,0 +1,17 @@
+export const Program = (body) => ({ type: "Program", body });
+export const VarDecl = (id, init) => ({ type: "VarDecl", id, init });
+export const IfStmt = (test, cons, alt) => ({ type: "IfStmt", test, cons, alt });
+export const ForStmt = (init, test, update, body) => ({ type: "ForStmt", init, test, update, body });
+export const ImportStmt = (id) => ({ type: "ImportStmt", id });
+export const Block = (body) => ({ type: "Block", body });
+export const Assign = (left, right) => ({ type: "Assign", left, right });
+export const Binary = (op, left, right) => ({ type: "Binary", op, left, right });
+export const Unary = (op, arg) => ({ type: "Unary", op, arg });
+export const Call = (callee, args) => ({ type: "Call", callee, args });
+export const Member = (obj, prop) => ({ type: "Member", obj, prop });
+export const Ident = (name) => ({ type: "Ident", name });
+export const Num = (value) => ({ type: "Num", value });
+export const Str = (value) => ({ type: "Str", value });
+export const FunctionDecl = (name, params, body) => ({ type: "FunctionDecl", name, params, body });
+export const ReturnStmt = (arg) => ({ type: "ReturnStmt", arg });
+export const ExportStmt = (name) => ({ type: "ExportStmt", name });

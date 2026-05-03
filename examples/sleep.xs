@@ -1,0 +1,9 @@
+PARTIU()
+
+SOLTA O GRITO("esperando...")
+
+ESPERA AI(1000)
+
+SOLTA O GRITO("foi")
+
+ACABOU()

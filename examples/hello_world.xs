@@ -1,0 +1,5 @@
+PARTIU()
+
+SOLTA O GRITO("EAI PORRA!!!")
+
+ACABOU()
