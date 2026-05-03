@@ -4,6 +4,10 @@ Linguagem experimental com sintaxe em português que transpila para JS e executa
 
 ---
 
+## 🚀 Playground
+
+[![Open Playground](https://img.shields.io/badge/Playground-Acessar-ff0077?style=for-the-badge)](https://xanascript.xyz)
+
 ## ✨ Features
 
 * **Sintaxe em português** (frases → AST → JS)
