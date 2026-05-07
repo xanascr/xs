@@ -1,82 +1,66 @@
 import fs from "fs";
 import path from "path";
-import vm from "vm";
 import axios from "axios";
 
 import { lex } from "./lexer.js";
 import { parse } from "./parser.js";
-import { generate } from "./codegen.js";
+import { optimize } from "./optimizer.js";
+import { interpret } from "./interpreter.js";
 
-const MODULE_CACHE = new Map();
-const ALLOWED = new Set(["axios"]);
-
-async function __http(url) {
-  const res = await axios.get(url, { timeout: 3000 });
-  return res.data;
-}
+const CACHE = new Map();
 
 export async function runXS(code, baseDir = process.cwd()) {
-  const context = vm.createContext({
-    console,
-    __http,
-    __sleep,  
-    __randInt,  
-    __env,     
-    __require: async (mod) => __require(mod, context, baseDir)
-  });
-
-  return execute(code, context, baseDir);
-}
-
-function __sleep(ms) {
-  return new Promise(res => setTimeout(res, ms));
-}
-
-function __randInt(min, max) {
-  min = Number(min);
-  max = Number(max);
-  if (!Number.isFinite(min) || !Number.isFinite(max)) {
-    throw new Error("SORTEIA requer números");
-  }
-  if (max < min) [min, max] = [max, min];
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function __env(key) {
-  if (typeof key !== "string") {
-    throw new Error("OUVE AQUI requer string");
-  }
-  return process.env[key] ?? null;
-}
-
-async function execute(code, context, baseDir) {
   const tokens = lex(code);
-  const ast = parse(tokens);
 
-  const js = `
-    (async () => {
-      const __exports = {};
-      ${generate(ast)}
-      return __exports;
-    })()
-  `;
+  let ast = parse(tokens);
+  ast = optimize(ast);
 
-  const script = new vm.Script(js);
-  return script.runInContext(context);
+  const env = createEnv(baseDir);
+  return interpret(ast, env);
 }
 
-async function __require(mod, context, baseDir) {
-  const fullPath = path.resolve(baseDir, mod);
+function createEnv(baseDir) {
+  return {
+    SOLTA_O_GRITO: (...a) => console.log(...a),
+    FALA_BAIXO: (...a) => console.warn(...a),
+    AGORA_VAI: async url => {
+      const res = await axios.get(url, {
+        timeout: 3000
+      });
+      return res.data;
+    },
+    ESPERA_AI: ms => new Promise(r => setTimeout(r, ms)),
+    SORTEIA: (a, b) => Math.floor(Math.random() * (b - a + 1)) + a,
+    PARSEIA: JSON.parse,
+    OUVE_AQUI: k => process.env[k] ?? null,
+    __IMPORT__: async mod => {
+      const full = path.resolve(baseDir, mod);
+      if (CACHE.has(full)) {
+        return CACHE.get(full);
+      }
+      const code = fs.readFileSync(full, "utf-8");
+      const exports = {};
+      const env2 = createEnv(path.dirname(full));
+      env2.EXPORTA = (name, value) => { exports[name] = value; };
+      await runModule(code, env2);
+      CACHE.set(full, exports);
+      return exports;
+    }
+  };
+}
 
-  if (MODULE_CACHE.has(fullPath)) {
-    return MODULE_CACHE.get(fullPath);
+async function runModule(code, env) {
+  const tokens = lex(code);
+
+  let ast = parse(tokens);
+  ast = optimize(ast);
+
+  for (const stmt of ast.body) {
+    if (stmt.type === "ExportStmt") {
+      env.EXPORTA(stmt.name, env[stmt.name]);
+      continue;
+    }
+
+    await interpret(stmt, env);
   }
-
-  const code = fs.readFileSync(fullPath, "utf-8");
-
-  const exports = await execute(code, context, path.dirname(fullPath));
-
-  MODULE_CACHE.set(fullPath, exports);
-
-  return exports;
 }

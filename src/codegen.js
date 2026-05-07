@@ -3,9 +3,7 @@ export function generate(node) {
     case "FunctionDecl":
       return `function ${node.name}(${node.params.join(",")}) ${generate(node.body)}`;
     case "ReturnStmt":
-      return node.arg
-        ? `return ${generate(node.arg)};`
-        : `return;`;
+      return node.arg ? `return ${generate(node.arg)};` : `return;`;
     case "Program":
       return node.body.map(generate).join("\n");
     case "Block":
@@ -28,39 +26,30 @@ export function generate(node) {
     case "Call": {
       const callee = generate(node.callee);
       const args = node.args.map(generate).join(",");
-
       if (callee === "SOLTA_O_GRITO") {
         return `console.log(${args});`;
       }
-
       if (callee === "FALA_BAIXO") {
         return `console.warn(${args});`;
       }
-
       if (callee === "AGORA_VAI") {
         return `await __http(${args})`;
       }
-
       if (callee === "ESPERA_AI") {
         return `await __sleep(${args})`;
       }
-
       if (callee === "SORTEIA") {
         return `__randInt(${args})`;
       }
-
       if (callee === "PARSEIA") {
         return `JSON.parse(${args})`;
       }
-
       if (callee === "OUVE_AQUI") {
         return `__env(${args})`;
       }
-
       if (callee === "__IMPORT__") {
         return `await __require(${args})`;
       }
-
       return `${callee}(${args})`;
     }
     case "Member":

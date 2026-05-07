@@ -1,5 +1,20 @@
 import * as A from "./ast.js";
 
+const PRECEDENCE = {
+    "||": 1,
+    "&&": 2,
+    "==": 3,
+    "!=": 3,
+    "<": 4,
+    "<=": 4,
+    ">": 4,
+    ">=": 4,
+    "+": 5,
+    "-": 5,
+    "*": 6,
+    "/": 6
+};
+
 export function parse(tokens) {
     let i = 0;
     const peek = () => tokens[i];
@@ -9,7 +24,6 @@ export function parse(tokens) {
         if (tok.type !== t) throw new Error(`Esperado ${t}, veio ${tok.type}`);
         return tok;
     };
-
     const matchSeq = (...types) => {
         for (let k = 0; k < types.length; k++) {
             if (tokens[i + k]?.type !== types[k]) return false;
@@ -19,40 +33,32 @@ export function parse(tokens) {
 
     function matchPhrase(name, parts) {
         if (!matchSeq(...parts)) return null;
-
         parts.forEach(() => next());
         return A.Ident(name);
     }
 
     function parseProgram() {
         const body = [];
-
         if (peek().type === "PARTIU") {
             expect("PARTIU"); expect("("); expect(")");
-
             while (peek().type !== "ACABOU") {
                 body.push(parseStmt());
             }
-
             expect("ACABOU"); expect("("); expect(")");
         } else {
             while (peek().type !== "EOF") {
                 body.push(parseStmt());
             }
         }
-
         expect("EOF");
         return A.Program(body);
     }
 
     function parseFunction() {
         expect("CHAMA"); expect("ESSE"); expect("CARA");
-
         const name = expect("IDENT").value;
-
         expect("(");
         const params = [];
-
         if (peek().type !== ")") {
             do {
                 params.push(expect("IDENT").value);
@@ -60,23 +66,14 @@ export function parse(tokens) {
                 next();
             } while (true);
         }
-
         expect(")");
-
         const body = parseBlock();
-
         return A.FunctionDecl(name, params, body);
     }
-
     function parseReturn() {
         expect("VOLTA");
-
         let arg = null;
-
-        if (peek().type !== "}" && peek().type !== "EOF") {
-            arg = parseExpr();
-        }
-
+        if (peek().type !== "}" && peek().type !== "EOF") arg = parseExpr();
         optionalSemicolon();
         return A.ReturnStmt(arg);
     }
@@ -144,7 +141,7 @@ export function parse(tokens) {
 
         if (peek().type !== ";") {
             if (peek().type === "CRIA") {
-                init = parseVarDecl(false); 
+                init = parseVarDecl(false);
             } else {
                 init = parseExpr();
             }
@@ -182,14 +179,6 @@ export function parse(tokens) {
         if (peek().type === ";") next();
     }
 
-    // Pratt parser
-    const PRECEDENCE = {
-        "==": 1, "!=": 1,
-        "<": 2, "<=": 2, ">": 2, ">=": 2,
-        "+": 3, "-": 3,
-        "*": 4, "/": 4
-    };
-
     function parseExpr() {
         return parseAssignment();
     }
@@ -219,10 +208,11 @@ export function parse(tokens) {
     }
 
     function parseUnary() {
-        if (peek().type === "-") {
-            next();
-            return A.Unary("-", parseUnary());
+        if (peek().type === "-" || peek().type === "!") {
+            const op = next().type;
+            return A.Unary(op, parseUnary());
         }
+
         return parseCall();
     }
 
@@ -255,14 +245,38 @@ export function parse(tokens) {
             matchPhrase("SOLTA_O_GRITO", ["SOLTA", "O", "GRITO"]) ||
             matchPhrase("FALA_BAIXO", ["FALA", "BAIXO"]) ||
             matchPhrase("AGORA_VAI", ["AGORA", "VAI"]) ||
-            matchPhrase("ESPERA_AI", ["ESPERA", "AI"]) ||  
-            matchPhrase("OUVE_AQUI", ["OUVE", "AQUI"]);    
+            matchPhrase("ESPERA_AI", ["ESPERA", "AI"]) ||
+            matchPhrase("OUVE_AQUI", ["OUVE", "AQUI"]);
 
         if (phrase) return phrase;
 
         const t = peek();
-        if (t.type === "SORTEIA") { next(); return A.Ident("SORTEIA"); } 
-        if (t.type === "PARSEIA") { next(); return A.Ident("PARSEIA"); } 
+
+        if (t.type === "SORTEIA") {
+            next();
+            return A.Ident("SORTEIA");
+        }
+
+        if (t.type === "PARSEIA") {
+            next();
+            return A.Ident("PARSEIA");
+        }
+
+        if (t.type === "VERDADEIRO") {
+            next();
+            return A.Bool(true);
+        }
+
+        if (t.type === "FALSO") {
+            next();
+            return A.Bool(false);
+        }
+
+        if (t.type === "NULO") {
+            next();
+            return A.Nil();
+        }
+
         if (t.type === "IMPORTA") {
             next();
 
@@ -274,7 +288,7 @@ export function parse(tokens) {
                 target = expect("IDENT").value;
             }
 
-            return A.Call(A.Ident("__IMPORT__"), [A.Str(target)]);
+            return A.ImportExpr(target);
         }
 
         if (t.type === "NUMBER") {
@@ -294,8 +308,11 @@ export function parse(tokens) {
 
         if (t.type === "(") {
             next();
+
             const e = parseExpr();
+
             expect(")");
+
             return e;
         }
 
