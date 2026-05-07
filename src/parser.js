@@ -235,9 +235,51 @@ export function parse(tokens) {
                 next();
                 const prop = expect("IDENT").value;
                 expr = A.Member(expr, prop);
+            } else if (peek().type === "[") {
+                next();
+                const index = parseExpr();
+                expect("]");
+                expr = A.IndexExpr(expr, index);
             } else break;
         }
         return expr;
+    }
+
+    function parseArrowFunction() {
+        let isAsync = false;
+        if (peek().type === "ASSINCRONO") {
+            next();
+            isAsync = true;
+        }
+        expect("(");
+        const params = [];
+        if (peek().type !== ")") {
+            do {
+                params.push(expect("IDENT").value);
+                if (peek().type !== ",") break;
+                next();
+            } while (true);
+        }
+        expect(")");
+        expect("=>");
+        let body;
+        if (peek().type === "{") {
+            body = parseBlock();
+        } else {
+            body = parseExpr();
+        }
+        return A.ArrowFunction(params, body, isAsync);
+    }
+
+    function parseTryCatch() {
+        expect("TENTA");
+        const tryBlock = parseBlock();
+        expect("PEGA");
+        expect("(");
+        const err = expect("IDENT").value;
+        expect(")");
+        const catchBlock = parseBlock();
+        return A.TryCatchStmt(tryBlock, err, catchBlock);
     }
 
     function parsePrimary() {
@@ -289,6 +331,51 @@ export function parse(tokens) {
             }
 
             return A.ImportExpr(target);
+        }
+        
+        if (peek().type === "TENTA") {
+            return parseTryCatch();
+        }
+
+        if (t.type === "(") {
+            let j = i;
+            while (tokens[j] && tokens[j].type !== ")") {
+                j++;
+            }
+            if (tokens[j + 1]?.type === "=>") {
+                return parseArrowFunction();
+            }
+        }
+
+        if (t.type === "{") {
+            next();
+            const props = [];
+            if (peek().type !== "}") {
+                do {
+                    const key = expect("IDENT").value;
+                    expect(":");
+                    const value = parseExpr();
+                    props.push({ key, value });
+                    if (peek().type !== ",") break;
+                    next();
+                } while (true);
+            }
+            expect("}");
+            return A.ObjectExpr(props);
+        }
+
+        if (t.type === "[") {
+            next();
+            const items = [];
+            if (peek().type !== "]") {
+                do {
+                    items.push(parseExpr());
+                    if (peek().type !== ",") break;
+                    next();
+                } while (true);
+            }
+            expect("]");
+            return A.ArrayExpr(items);
         }
 
         if (t.type === "NUMBER") {

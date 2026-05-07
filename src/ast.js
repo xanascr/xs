@@ -17,3 +17,8 @@ export const Num = value => ({ type: "Num", value });
 export const Str = value => ({ type: "Str", value });
 export const Bool = value => ({ type: "Bool", value });
 export const Nil = () => ({ type: "Nil" });
+export const ArrayExpr = (items) => ({ type: "ArrayExpr", items });
+export const ObjectExpr = (props) => ({ type: "ObjectExpr", props });
+export const ArrowFunction = (params, body, isAsync = false) => ({ type: "ArrowFunction", params, body, isAsync });
+export const TryCatchStmt = (tryBlock, catchParam, catchBlock) => ({ type: "TryCatchStmt", tryBlock, catchParam, catchBlock });
+export const IndexExpr = (obj, index) => ({ type: "IndexExpr", obj, index });

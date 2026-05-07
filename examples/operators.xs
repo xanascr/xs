@@ -1,0 +1,17 @@
+PARTIU()
+
+CRIA a = 10 + 5
+CRIA b = 20 - 3
+CRIA c = 4 * 5
+CRIA d = 100 / 2
+
+SOLTA O GRITO(a)
+SOLTA O GRITO(b)
+SOLTA O GRITO(c)
+SOLTA O GRITO(d)
+
+CRIA e = (10 + 2) * 3
+
+SOLTA O GRITO(e)
+
+ACABOU()

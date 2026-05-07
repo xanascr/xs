@@ -16,7 +16,11 @@ const KEYWORDS = new Set([
   "OUVE", "AQUI",
   "VERDADEIRO",
   "FALSO",
-  "NULO"
+  "NULO",
+  "TENTA",
+  "PEGA",
+  "ERRO",
+  "ASSINCRONO"
 ]);
 
 export function lex(input) {
@@ -84,13 +88,21 @@ export function lex(input) {
     const three = input.slice(i, i + 3);
     const two = input.slice(i, i + 2);
 
-    if (["&&", "||", "==", "!=", ">=", "<="].includes(two)) {
+    if ([
+      "=>",
+      "&&",
+      "||",
+      "==",
+      "!=",
+      ">=",
+      "<="
+    ].includes(two)) {
       tokens.push({ type: two, value: two });
       i += 2;
       continue;
     }
 
-    if ("(){};,=.+-*/<>!".includes(c)) {
+    if ("(){}[];,=:+.-*/<>!".includes(c)) {
       tokens.push({ type: c, value: c });
       i++;
       continue;

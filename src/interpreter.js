@@ -156,6 +156,45 @@ export async function interpret(node, env) {
     }
     case "ExportStmt":
       return null;
+    case "ArrayExpr": {
+      const arr = [];
+      for (const item of node.items) {
+        arr.push(await interpret(item, env));
+      }
+      return arr;
+    }
+    case "ObjectExpr": {
+      const obj = {};
+      for (const p of node.props) {
+        obj[p.key] = await interpret(p.value, env);
+      }
+      return obj;
+    }
+    case "ArrowFunction": {
+      const fn = async (...args) => {
+        const scope = Object.create(env);
+        node.params.forEach((p, i) => { scope[p] = args[i]; });
+        if (node.body.type === "Block") {
+          return interpret(node.body, scope);
+        }
+        return interpret(node.body, scope);
+      };
+      return fn;
+    }
+    case "TryCatchStmt": {
+      try {
+        return await interpret(node.tryBlock, env);
+      } catch (e) {
+        const scope = Object.create(env);
+        scope[node.catchParam] = e;
+        return interpret(node.catchBlock, scope);
+      }
+    }
+    case "IndexExpr": {
+      const obj = await interpret(node.obj, env);
+      const index = await interpret(node.index, env);
+      return obj[index];
+    }
     default:
       throw new Error("Node não suportado: " + node.type);
   }

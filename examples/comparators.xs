@@ -1,0 +1,15 @@
+PARTIU()
+
+CRIA x = 10
+CRIA y = 20
+
+SOLTA O GRITO(x == y)
+SOLTA O GRITO(x != y)
+
+SOLTA O GRITO(x < y)
+SOLTA O GRITO(x <= y)
+
+SOLTA O GRITO(y > x)
+SOLTA O GRITO(y >= x)
+
+ACABOU()
