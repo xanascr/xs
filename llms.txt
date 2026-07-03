@@ -1,0 +1,322 @@
+# XanaScript - LLM Documentation
+
+## Overview
+
+XanaScript is a programming language with Portuguese syntax, an optimizing compiler (JavaScript + WebAssembly), built-in ORM, compile-time macros, LSP, and zero runtime dependencies.
+
+- Repository: https://github.com/xanascr/xs
+- License: MIT
+- Language: Portuguese keywords, JavaScript/WebAssembly compilation target
+
+## Project Structure
+
+```
+xs/
+  src/           Compiler source (20 modules)
+  test/          Unit tests
+  std/           Standard library
+  scripts/       Build scripts
+  docs/          Documentation (en, pt-br, es)
+  package.json   npm package
+  VERSION        Version file
+```
+
+Key source files:
+
+| File | Purpose |
+|------|---------|
+| src/lexer.js | Tokenization with line/col tracking |
+| src/parser.js | AST generation via recursive descent |
+| src/ast.js | AST node constructors |
+| src/optimizer.js | Constant folding, dead branch elimination, macro expansion |
+| src/interpreter.js | AST-walking interpreter |
+| src/runtime.js | Built-in functions and execution environment |
+| src/codegen.js | Standard JavaScript code generation |
+| src/codegen_opt.js | Optimized JS with TypedArrays |
+| src/codegen_wasm.js | WebAssembly text format generation |
+| src/wasm_binary.js | Direct WebAssembly binary emission |
+| src/errors.js | Rust-style error formatting |
+| src/cli.js | CLI entry point |
+| src/orm.js | Built-in ORM |
+| src/macros.js | Compile-time macro expansion |
+| src/lsp.js | Language Server Protocol |
+| src/testrunner.js | Unit test runner |
+| src/docsgen.js | HTML documentation generator |
+| src/pkgmgr.js | Package manager |
+| src/sourcemap.js | Source map generation |
+| src/bytecode/compiler.js | Bytecode compiler |
+| src/bytecode/vm.js | Bytecode VM |
+| src/bytecode/opcodes.js | Opcode definitions |
+| src/bench.js | Benchmark runner |
+
+## Language Syntax
+
+### Program Structure
+
+All XanaScript programs are wrapped in PARTIU() / ACABOU():
+
+```xs
+PARTIU()
+  // code here
+ACABOU()
+```
+
+### Keywords
+
+```
+PARTIU, ACABOU, CRIA, SE, LIGA, SO, SENAO, REPETE, NA, MORAL, AI,
+CHAMA, ESSE, CARA, VOLTA, IMPORTA, EXPORTA, SOLTA, O, GRITO,
+FALA, BAIXO, AGORA, VAI, ESPERA, AI, SORTEIA, PARSEIA, OUVE, AQUI,
+VERDADEIRO, FALSO, NULO, TENTA, PEGA, ERRO, ASSINCRONO, VOA,
+CONTINUA, CLASSE, HERDA, CONSTRUTOR, ISTO, NOVA, METODO, ESCOLHE,
+CASO, PADRAO, COMBINA, SERVIDOR, PARA, TAMANHO, DIVIDE, TEXTO,
+ENCONTRA, DECODIFICA, URL, JUNTAR, TESTE, AFIRMA, ASSUNTO, TAREFA,
+TABELA, MACRO, TIPO, CRUD
+```
+
+### Data Types
+
+| Type | Examples |
+|------|----------|
+| Number | `10`, `3.14`, `-5` |
+| String | `"texto"`, `'texto'` |
+| Boolean | `VERDADEIRO`, `FALSO` |
+| Null | `NULO` |
+| Array | `[1, 2, 3]` |
+| Object | `{ nome: "Joao", idade: 30 }` |
+| Template | `` `Hello ${name}` `` |
+
+### Operators
+
+**Arithmetic:** `+` `-` `*` `/` `%`
+**Comparison:** `==` `!=` `>` `<` `>=` `<=` `~=`
+**Logical:** `&&` `||` `!`
+**Compound:** `+=` `-=` `*=` `/=` `%=`
+**Ternary:** `test ? cons : alt`
+
+### Variables
+
+```xs
+CRIA x = 10
+CRIA nome = "Maria"
+CRIA ativo = VERDADEIRO
+CRIA valor = NULO
+```
+
+### Control Flow
+
+**If/Else:**
+```xs
+SE LIGA SO (cond) { } SENAO { }
+SENAO SE LIGA SO (cond) { }
+```
+
+**While:**
+```xs
+REPETE AI (cond) { }
+```
+
+**For:**
+```xs
+REPETE NA MORAL (init; test; update) { }
+```
+
+**Break/Continue:**
+```xs
+VOA()     // break
+CONTINUA() // continue
+```
+
+**Switch:**
+```xs
+ESCOLHE (expr) {
+  CASO valor: code
+  PADRAO: code
+}
+```
+
+**Pattern Matching:**
+```xs
+COMBINA (expr) {
+  CASO pattern: code
+  CASO _: code
+}
+```
+
+### Functions
+
+```xs
+CHAMA ESSE CARA nome(params) { }
+VOLTA expr
+```
+
+Arrow functions:
+```xs
+(params) => expr
+(params) => { }
+ASSINCRONO (params) => { }
+```
+
+### Classes / OOP
+
+```xs
+CLASSE Nome {
+  CONSTRUTOR(params) { }
+  METODO nome(params) { }
+}
+CLASSE Filha HERDA Pai { }
+ISTO    // this
+NOVA Classe() // new
+```
+
+### Error Handling
+
+```xs
+TENTA { } PEGA(erro) { }
+```
+
+### Modules
+
+```xs
+IMPORTA "path"
+IMPORTA "path" as alias
+IMPORTA nome
+EXPORTA nome
+```
+
+### Macros (Compile-time)
+
+```xs
+MACRO nome(params) { body }
+```
+
+### ORM
+
+```xs
+TABELA Nome { campo: TIPO }
+CRIA repo = TABELA("Nome")
+repo.criar(obj)
+repo.listar()
+repo.buscar(id)
+repo.atualizar(id, obj)
+repo.deletar(id)
+repo.buscarOnde(filter)
+repo.contar()
+```
+
+### Testing
+
+```xs
+TESTE("name") { AFIRMA(cond) }
+ASSUNTO(actual, expected)
+```
+
+### Tasks
+
+```xs
+TAREFA("name") { }
+```
+
+## Built-in Functions
+
+| Function | Description | Signature |
+|----------|-------------|-----------|
+| SOLTA_O_GRITO | Prints to stdout | SOLTA_O_GRITO(...args) |
+| FALA_BAIXO | Prints to stderr | FALA_BAIXO(...args) |
+| AGORA_VAI | HTTP GET request | AGORA_VAI(url) |
+| ESPERA_AI | Sleep/delay | ESPERA_AI(ms) |
+| SORTEIA | Random integer | SORTEIA(min, max) |
+| PARSEIA | JSON parse | PARSEIA(json) |
+| OUVE_AQUI | Environment variable | OUVE_AQUI(chave) |
+| TAMANHO | Length of array/string | TAMANHO(valor) |
+| DIVIDE_TEXTO | String split | DIVIDE_TEXTO(texto, separador) |
+| DECODIFICA_URL | URL decode | DECODIFICA_URL(url) |
+| CRIA_SERVIDOR | HTTP server | CRIA_SERVIDOR(porta, handler) |
+| PARA_SERVIDOR | Stop server | PARA_SERVIDOR(server) |
+
+## CLI Commands
+
+```
+xs run <file>         Execute .xs file (AST Interpreter)
+xs vm <file>          Execute .xs file (Bytecode VM)
+xs check <file>       Check syntax only
+xs build <file>       Generate JavaScript
+xs build --opt <file> Generate optimized JavaScript
+xs build --wasm <file>Generate WebAssembly (.wat + .wasm)
+xs build --standalone <file> Generate single .js with runtime
+xs test <dir>         Run test files
+xs dev <file>         Watch mode with hot reload
+xs fmt <file>         Format .xs file
+xs repl               Interactive REPL
+xs lsp                Language Server Protocol (stdin/stdout)
+xs docs <src> <out>   Generate HTML documentation
+xs init <name>        Create new project scaffold
+xs install <pkg>      Install a package
+xs publish            Publish current package
+xs bench              Run benchmarks
+```
+
+## Compilation Pipeline
+
+```
+.xs source  ->  Lexer  ->  Parser  ->  Optimizer  ->  Codegen -> Output
+                                                       |-> JS
+                                                       |-> Opt JS (TypedArrays)
+                                                       |-> Wasm text
+                                                       |-> Wasm binary
+                                                       |-> Bytecode -> VM
+```
+
+1. **Lexer** (lexer.js): Converts source text to tokens with position tracking
+2. **Parser** (parser.js): Recursive descent parser, generates AST
+3. **Optimizer** (optimizer.js): Constant folding, dead branch elimination, macro expansion
+4. **Code Generation**: Multiple backends
+   - codegen.js: Standard JavaScript
+   - codegen_opt.js: Optimized JS with int32 TypedArrays
+   - codegen_wasm.js: WebAssembly text (.wat) format
+   - wasm_binary.js: Direct binary Wasm emission
+   - bytecode/compiler.js + bytecode/vm.js: Stack-based bytecode
+
+## Error System
+
+Rust-style errors with source code preview, arrow pointing to exact location, and hints:
+
+```
+  XSError: message
+    --> file.xs:line:col
+  1 | code
+    | ^
+  hint: suggestion
+```
+
+Error codes: E001-E005, E999, I001
+
+## Bytecode VM (26 opcodes)
+
+Opcodes include: PUSH, POP, ADD, SUB, MUL, DIV, MOD, EQ, NEQ, GT, LT, GTE, LTE, AND, OR, NOT, NEG, JMP, JIF, LOAD, STORE, CALL, RET, PRN, NEWA, NEWO, LDAT, STAT, DUP, SWAP, HALT
+
+## ORM (Object-Relational Mapping)
+
+SQLite-backed repository with JSON file storage. Field types: TEXTO, NUMERO, BOOLEANO, DATA. Data stored in `.xs-data/` directory.
+
+## LSP (Language Server Protocol)
+
+Provides autocomplete, hover information, go-to-definition, diagnostics, and signature help via stdin/stdout.
+
+## Package Manager
+
+Registry: https://api.xanascript.dev/packages
+Fallback: npm with `xanascript-` prefix
+Commands: xs init, xs install, xs publish
+
+## Source Maps
+
+VLQ-encoded source mappings between generated JS and original .xs lines. Comment format: `//# sourceMappingURL=data:application/json;base64,...`
+
+## Build Process
+
+Requires bun for native compilation:
+```bash
+node scripts/build-all.js
+```
+Outputs standalone binary `dist/xs(.exe)` with zero dependencies. Bundles all 147 modules into single executable.

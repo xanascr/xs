@@ -1,11 +1,13 @@
 {
   "name": "xanascript",
+  "version": "2.0.0",
   "type": "module",
   "bin": {
     "xs": "./src/cli.js"
   },
   "scripts": {
-    "dev": "node src/cli.js run examples/app.xs"
+    "dev": "node src/cli.js run ../xs-examples/hello.xs",
+    "build": "node scripts/build-all.js"
   },
   "dependencies": {
     "axios": "^1.16.0",

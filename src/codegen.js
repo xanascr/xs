@@ -61,6 +61,32 @@ export function generate(node) {
       return String(node.value);
     case "Str":
       return JSON.stringify(node.value);
+    case "Bool":
+      return node.value ? "true" : "false";
+    case "Nil":
+      return "null";
+    case "ArrayExpr":
+      return `[${node.items.map(generate).join(",")}]`;
+    case "ObjectExpr":
+      return `{${node.props.map(p => `${p.key}:${generate(p.value)}`).join(",")}}`;
+    case "Member":
+      return `${generate(node.obj)}.${node.prop}`;
+    case "IndexExpr":
+      return `${generate(node.obj)}[${generate(node.index)}]`;
+    case "ImportExpr":
+      return `await __require(${JSON.stringify(node.path)})`;
+    case "ImportStmt":
+      return `await __require(${JSON.stringify(node.path)});`;
+    case "TryCatchStmt":
+      return `try ${generate(node.tryBlock)} catch(${node.catchParam}) ${generate(node.catchBlock)}`;
+    case "WhileStmt":
+      return `while(${generate(node.test)}) ${generate(node.body)}`;
+    case "BreakStmt":
+      return `break;`;
+    case "ContinueStmt":
+      return `continue;`;
+    case "Ternary":
+      return `(${generate(node.test)}?${generate(node.cons)}:${generate(node.alt)})`;
     default:
       throw new Error("Node não suportado: " + node.type);
   }

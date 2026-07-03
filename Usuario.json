@@ -1,0 +1,31 @@
+[
+  {
+    "id": 1,
+    "nome": "João Silva",
+    "idade": 31,
+    "email": "joao@email.com",
+    "criadoEm": "2026-07-02T20:37:44.338Z",
+    "atualizadoEm": "2026-07-03T13:42:47.472Z"
+  },
+  {
+    "id": 2,
+    "nome": "Maria",
+    "idade": 25,
+    "email": "maria@email.com",
+    "criadoEm": "2026-07-02T20:37:44.342Z"
+  },
+  {
+    "id": 4,
+    "nome": "Maria",
+    "idade": 25,
+    "email": "maria@email.com",
+    "criadoEm": "2026-07-03T13:42:47.462Z"
+  },
+  {
+    "id": 5,
+    "nome": "Pedro",
+    "idade": 35,
+    "email": "pedro@email.com",
+    "criadoEm": "2026-07-03T13:42:47.463Z"
+  }
+]
