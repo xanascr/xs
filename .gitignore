@@ -3,3 +3,6 @@ node_modules
 package-lock.json
 dist
 _xs_entry.mjs
+*.json-data
+*.db
+Usuario.json
