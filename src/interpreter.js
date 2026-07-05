@@ -40,7 +40,7 @@ export async function interpret(node, env) {
       return result;
     }
     case "VarDecl": {
-      const val = await interpret(node.init, env);
+      const val = node.init ? await interpret(node.init, env) : undefined;
       env[node.id] = val;
       return val;
     }

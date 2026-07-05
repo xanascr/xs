@@ -1,5 +1,6 @@
 import * as A from "./ast.js";
 import { XSError, expected, undefinedVar, invalidSyntax } from "./errors.js";
+import { lex } from "./lexer.js";
 
 const PRECEDENCE = {
     "?": 0,
@@ -227,8 +228,11 @@ export function parse(tokens) {
             next();
             type = expect("IDENT").value;
         }
-        expect("=");
-        const init = parseExpr();
+        let init = null;
+        if (peek().type === "=") {
+            next();
+            init = parseExpr();
+        }
 
         if (expectSemi) optionalSemicolon();
 
@@ -693,6 +697,21 @@ export function parse(tokens) {
             return A.Ident("PARSEIA");
         }
 
+        if (t.type === "TAMANHO") {
+            next();
+            return A.Ident("TAMANHO");
+        }
+
+        if (t.type === "ENCONTRA") {
+            next();
+            return A.Ident("ENCONTRA");
+        }
+
+        if (t.type === "JUNTAR") {
+            next();
+            return A.Ident("JUNTAR");
+        }
+
         if (t.type === "VERDADEIRO") {
             next();
             return A.Bool(true);
@@ -805,6 +824,10 @@ export function parse(tokens) {
         if (t.type === "IDENT") {
             next();
             return A.Ident(t.value);
+        }
+
+        if (t.type === "COMBINA") {
+            return parseMatch();
         }
 
         if (t.type === "(") {
