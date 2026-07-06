@@ -15,8 +15,8 @@
     "url": "git+https://github.com/xanascr/xs.git"
   },
   "keywords": ["xanascript", "language", "portuguese", "programming", "compiler", "wasm"],
-  "author": "XanaScript",
-  "license": "MIT",
+  "author": "flazo0",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/xanascr/xs/issues"
   },
