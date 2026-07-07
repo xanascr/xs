@@ -14,7 +14,12 @@ import { createEnv } from "./runtime.js";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const VERSION = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf-8")).version;
+let VERSION;
+try {
+  VERSION = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf-8")).version;
+} catch (_) {
+  VERSION = "2.2.0";
+}
 
 const [, , cmd, ...rest] = process.argv;
 
