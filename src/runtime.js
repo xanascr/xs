@@ -34,6 +34,7 @@ export function createEnv(baseDir) {
     FALA_BAIXO: (...a) => console.warn(...a),
 
     AGORA: () => Date.now(),
+    String: String,
 
     AGORA_VAI: async url => {
       try {

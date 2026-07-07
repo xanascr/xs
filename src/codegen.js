@@ -50,6 +50,12 @@ export function generate(node) {
       if (callee === "__IMPORT__") {
         return `await __require(${args})`;
       }
+      if (callee === "TAMANHO") return `${args[0]}.length`;
+      if (callee === "DIVIDE_TEXTO") return `${args[0]}.split(${args[1]})`;
+      if (callee === "ENCONTRA") return `${args[0]}.match(new RegExp(${args[1]}))`;
+      if (callee === "DECODIFICA_URL") return `decodeURIComponent(${args[0]})`;
+      if (callee === "JUNTAR") return `${args[0]}.join(${args[1]})`;
+      if (callee === "AGORA") return `Date.now()`;
       return `${callee}(${args})`;
     }
     case "Member":

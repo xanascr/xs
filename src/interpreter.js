@@ -207,20 +207,45 @@ export async function interpret(node, env) {
       throw new ContinueSignal();
     }
     case "Call": {
+      if (node.callee.type === "Ident") {
+        const name = node.callee.name;
+        if (name === "TAMANHO") {
+          const args = []; for (const a of node.args) args.push(await interpret(a, env));
+          return args[0]?.length;
+        }
+        if (name === "DIVIDE_TEXTO") {
+          const args = []; for (const a of node.args) args.push(await interpret(a, env));
+          return args[0]?.split(args[1]);
+        }
+        if (name === "ENCONTRA") {
+          const args = []; for (const a of node.args) args.push(await interpret(a, env));
+          return String(args[0])?.match(new RegExp(args[1]));
+        }
+        if (name === "DECODIFICA_URL") {
+          const args = []; for (const a of node.args) args.push(await interpret(a, env));
+          return decodeURIComponent(args[0]);
+        }
+        if (name === "JUNTAR") {
+          const args = []; for (const a of node.args) args.push(await interpret(a, env));
+          return args[0]?.join(args[1]);
+        }
+        if (name === "AGORA") return Date.now();
+      }
+
+      if (node.callee.type === "Member") {
+        const obj = await interpret(node.callee.obj, env);
+        const fn = obj[node.callee.prop];
+        const args = [];
+        for (const a of node.args) {
+          args.push(await interpret(a, env));
+        }
+        if (typeof fn === "function") return fn.call(obj, ...args);
+      }
+
       const fn = await interpret(node.callee, env);
       const args = [];
       for (const a of node.args) {
         args.push(await interpret(a, env));
-      }
-
-      if (node.callee.type === "Ident") {
-        const name = node.callee.name;
-        if (name === "TAMANHO") return args[0]?.length;
-        if (name === "DIVIDE_TEXTO") return args[0]?.split(args[1]);
-        if (name === "ENCONTRA") return String(args[0])?.match(new RegExp(args[1]));
-        if (name === "DECODIFICA_URL") return decodeURIComponent(args[0]);
-        if (name === "JUNTAR") return args[0]?.join(args[1]);
-        if (name === "AGORA") return Date.now();
       }
 
       if (typeof fn !== "function") {
