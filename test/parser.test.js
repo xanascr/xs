@@ -82,6 +82,30 @@ function testParser() {
   ast = parse(lex("x *= 2"));
   assert(ast.body[0].right.op === "*", "compound *= op is *");
 
+  ast = parse(lex("a | b"));
+  assert(ast.body[0].type === "Binary" && ast.body[0].op === "|", "bitwise OR");
+
+  ast = parse(lex("a & b"));
+  assert(ast.body[0].op === "&", "bitwise AND");
+
+  ast = parse(lex("a ^ b"));
+  assert(ast.body[0].op === "^", "bitwise XOR");
+
+  ast = parse(lex("~a"));
+  assert(ast.body[0].type === "Unary" && ast.body[0].op === "~", "bitwise NOT");
+
+  ast = parse(lex("a << b"));
+  assert(ast.body[0].op === "<<", "left shift");
+
+  ast = parse(lex("a >> b"));
+  assert(ast.body[0].op === ">>", "right shift");
+
+  ast = parse(lex("a |= 1"));
+  assert(ast.body[0].right.op === "|", "compound |=");
+
+  ast = parse(lex("a <<= 2"));
+  assert(ast.body[0].right.op === "<<", "compound <<=");
+
   console.log("  PARSER: OK\n");
 }
 

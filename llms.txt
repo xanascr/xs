@@ -89,9 +89,10 @@ TABELA, MACRO, TIPO, CRUD
 ### Operators
 
 **Arithmetic:** `+` `-` `*` `/` `%`
+**Bitwise:** `|` `&` `^` `~` `<<` `>>`
 **Comparison:** `==` `!=` `>` `<` `>=` `<=` `~=`
 **Logical:** `&&` `||` `!`
-**Compound:** `+=` `-=` `*=` `/=` `%=`
+**Compound:** `+=` `-=` `*=` `/=` `%=` `|=` `&=` `^=` `<<=` `>>=`
 **Ternary:** `test ? cons : alt`
 
 ### Variables

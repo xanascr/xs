@@ -32,5 +32,12 @@ export const OP = {
   SWAP: 24,
   WARN: 25,
 
-  HALT: 26
+  HALT: 26,
+
+  BIT_OR: 27,
+  BIT_AND: 28,
+  BIT_XOR: 29,
+  BIT_SHL: 30,
+  BIT_SHR: 31,
+  BIT_NOT: 32,
 };

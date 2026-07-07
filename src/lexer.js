@@ -167,12 +167,21 @@ export function lex(input, file = "input.xs") {
       continue;
     }
 
+    const three = input.slice(i, i + 3);
+    if ([
+      "<<=", ">>=",
+    ].includes(three)) {
+      push({ type: three, value: three });
+      i += 3; col += 3;
+      continue;
+    }
+
     const two = input.slice(i, i + 2);
 
     if ([
       "=>", "&&", "||", "==", "!=", ">=", "<=",
       "+=", "-=", "*=", "/=", "%=", "->", "~=",
-      "++", "--",
+      "++", "--", "<<", ">>", "|=", "&=", "^=",
       "//", "/*",
     ].includes(two)) {
       push({ type: two, value: two });
@@ -180,7 +189,7 @@ export function lex(input, file = "input.xs") {
       continue;
     }
 
-    if ("(){}[];,=:+.-*/<>!%?".includes(c)) {
+    if ("(){}[];,=:+.-*/<>!%?|&^~".includes(c)) {
       push({ type: c, value: c });
       i++; col++;
       continue;

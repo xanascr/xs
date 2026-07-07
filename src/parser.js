@@ -6,18 +6,23 @@ const PRECEDENCE = {
     "?": 0,
     "||": 1,
     "&&": 2,
-    "==": 3,
-    "!=": 3,
-    "~=": 3,
-    "<": 4,
-    "<=": 4,
-    ">": 4,
-    ">=": 4,
-    "+": 5,
-    "-": 5,
-    "*": 6,
-    "/": 6,
-    "%": 6
+    "|": 3,
+    "^": 4,
+    "&": 5,
+    "==": 6,
+    "!=": 6,
+    "~=": 6,
+    "<": 7,
+    "<=": 7,
+    ">": 7,
+    ">=": 7,
+    "<<": 8,
+    ">>": 8,
+    "+": 9,
+    "-": 9,
+    "*": 10,
+    "/": 10,
+    "%": 10
 };
 
 export function parse(tokens) {
@@ -574,7 +579,7 @@ export function parse(tokens) {
 
     function parseAssignment() {
         let left = parseBinary(0);
-        const compoundOps = { "+=": "+", "-=": "-", "*=": "*", "/=": "/", "%=": "%" };
+        const compoundOps = { "+=": "+", "-=": "-", "*=": "*", "/=": "/", "%=": "%", "|=": "|", "&=": "&", "^=": "^", "<<=": "<<", ">>=": ">>" };
         if (peek().type === "=" || compoundOps[peek().type]) {
             const op = next().type;
             const right = parseAssignment();
@@ -610,7 +615,7 @@ export function parse(tokens) {
     }
 
     function parseUnary() {
-        if (peek().type === "-" || peek().type === "!") {
+        if (peek().type === "-" || peek().type === "!" || peek().type === "~") {
             const op = next().type;
             A.setLoc(peek().loc);
             return A.Unary(op, parseUnary());

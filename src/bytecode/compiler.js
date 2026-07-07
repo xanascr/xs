@@ -70,6 +70,11 @@ export function compile(ast) {
           case ">": emit(OP.GT); break;
           case "<=": emit(OP.LTE); break;
           case ">=": emit(OP.GTE); break;
+          case "|": emit(OP.BIT_OR); break;
+          case "&": emit(OP.BIT_AND); break;
+          case "^": emit(OP.BIT_XOR); break;
+          case "<<": emit(OP.BIT_SHL); break;
+          case ">>": emit(OP.BIT_SHR); break;
         }
 
         break;
@@ -77,7 +82,8 @@ export function compile(ast) {
       case "Unary":
         emitNode(node.arg);
         if (node.op === "!") emit(OP.NOT);
-        if (node.op === "-") emit(OP.PUSH, 0); emit(OP.SWAP); emit(OP.SUB);
+        if (node.op === "-") { emit(OP.PUSH, 0); emit(OP.SWAP); emit(OP.SUB); }
+        if (node.op === "~") emit(OP.BIT_NOT);
         break;
 
       case "IfStmt": {

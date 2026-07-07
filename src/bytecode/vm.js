@@ -111,6 +111,47 @@ export function run(code) {
         break;
       }
 
+      case OP.BIT_OR: {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(a | b);
+        break;
+      }
+
+      case OP.BIT_AND: {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(a & b);
+        break;
+      }
+
+      case OP.BIT_XOR: {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(a ^ b);
+        break;
+      }
+
+      case OP.BIT_SHL: {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(a << b);
+        break;
+      }
+
+      case OP.BIT_SHR: {
+        const b = stack.pop();
+        const a = stack.pop();
+        stack.push(a >> b);
+        break;
+      }
+
+      case OP.BIT_NOT: {
+        const a = stack.pop();
+        stack.push(~a);
+        break;
+      }
+
       case OP.JMP:
         ip = arg;
         continue;

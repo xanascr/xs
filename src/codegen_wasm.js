@@ -174,6 +174,11 @@ function emitWasmCode(node, ctx) {
         "<": "i32.lt_s",
         ">=": "i32.ge_s",
         "<=": "i32.le_s",
+        "|": "i32.or",
+        "&": "i32.and",
+        "^": "i32.xor",
+        "<<": "i32.shl",
+        ">>": "i32.shr_s",
       };
 
       if (opMap[node.op]) {
@@ -190,6 +195,10 @@ function emitWasmCode(node, ctx) {
       }
       if (node.op === "!") {
         ctx.wasm.push(`    i32.eqz`);
+      }
+      if (node.op === "~") {
+        ctx.wasm.push(`    i32.const -1`);
+        ctx.wasm.push(`    i32.xor`);
       }
       break;
     }

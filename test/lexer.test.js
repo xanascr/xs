@@ -61,6 +61,39 @@ function testLexer() {
   assert(tokens[0].type === "TEMPLATE", "template string");
   assert(tokens[0].parts.length === 3, "template parts = 3");
 
+  tokens = lex("a | b");
+  assert(tokens[1].type === "|", "bitwise OR");
+
+  tokens = lex("a & b");
+  assert(tokens[1].type === "&", "bitwise AND");
+
+  tokens = lex("a ^ b");
+  assert(tokens[1].type === "^", "bitwise XOR");
+
+  tokens = lex("~a");
+  assert(tokens[0].type === "~", "bitwise NOT");
+
+  tokens = lex("a << b");
+  assert(tokens[1].type === "<<", "left shift");
+
+  tokens = lex("a >> b");
+  assert(tokens[1].type === ">>", "right shift");
+
+  tokens = lex("a |= 1");
+  assert(tokens[1].type === "|=", "OR assign");
+
+  tokens = lex("a &= 1");
+  assert(tokens[1].type === "&=", "AND assign");
+
+  tokens = lex("a ^= 1");
+  assert(tokens[1].type === "^=", "XOR assign");
+
+  tokens = lex("a <<= 1");
+  assert(tokens[1].type === "<<=", "left shift assign");
+
+  tokens = lex("a >>= 1");
+  assert(tokens[1].type === ">>=", "right shift assign");
+
   console.log("  LEXER: OK\n");
 }
 

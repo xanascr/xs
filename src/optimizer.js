@@ -99,6 +99,9 @@ export function optimize(node) {
       if (node.arg.type === "Num" && node.op === "-") {
         return { type: "Num", value: -node.arg.value };
       }
+      if (node.arg.type === "Num" && node.op === "~") {
+        return { type: "Num", value: ~node.arg.value };
+      }
       if (node.arg.type === "Bool" && node.op === "!") {
         return { type: "Bool", value: !node.arg.value };
       }
@@ -125,6 +128,11 @@ export function optimize(node) {
           case "<": return { type: "Bool", value: node.left.value < node.right.value };
           case ">=": return { type: "Bool", value: node.left.value >= node.right.value };
           case "<=": return { type: "Bool", value: node.left.value <= node.right.value };
+          case "|": return { type: "Num", value: node.left.value | node.right.value };
+          case "&": return { type: "Num", value: node.left.value & node.right.value };
+          case "^": return { type: "Num", value: node.left.value ^ node.right.value };
+          case "<<": return { type: "Num", value: node.left.value << node.right.value };
+          case ">>": return { type: "Num", value: node.left.value >> node.right.value };
         }
       }
 

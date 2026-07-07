@@ -101,7 +101,7 @@ export function generateOpt(node, types = {}, opts = {}) {
       const lt = typeOf(node.left, types);
       const rt = typeOf(node.right, types);
 
-      if (lt === "NUM" && rt === "NUM" && ["+", "-", "*"].includes(op)) {
+      if (lt === "NUM" && rt === "NUM" && ["+", "-", "*", "|", "&", "^", "<<", ">>"].includes(op)) {
         return `((${l}${op}${r})|0)`;
       }
 
@@ -319,6 +319,7 @@ function typeOf(node, types) {
       if (lt === "NUM" && rt === "NUM") return "NUM";
       if (node.op === "+" && (lt === "STR" || rt === "STR")) return "STR";
       if (["==", "!=", "~=", ">", "<", ">=", "<=", "&&", "||"].includes(node.op)) return "BOOL";
+      if (["|", "&", "^", "<<", ">>"].includes(node.op)) return "NUM";
       return null;
     }
     case "Unary": {

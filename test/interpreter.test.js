@@ -103,6 +103,30 @@ async function testInterpreter() {
   r = await run("FALSO ? 1 : 2");
   assert(r === 2, "ternary false");
 
+  r = await run("5 | 3");
+  assert(r === 7, "bitwise OR");
+
+  r = await run("5 & 3");
+  assert(r === 1, "bitwise AND");
+
+  r = await run("5 ^ 3");
+  assert(r === 6, "bitwise XOR");
+
+  r = await run("~0");
+  assert(r === -1, "bitwise NOT");
+
+  r = await run("1 << 3");
+  assert(r === 8, "left shift");
+
+  r = await run("8 >> 2");
+  assert(r === 2, "right shift");
+
+  r = await run("1 | 2 & 4");
+  assert(r === 1, "precedence & before |");
+
+  r = await run("2 << 2 | 1");
+  assert(r === 9, "precedence << before |");
+
   console.log("  INTERPRETER: OK\n");
 }
 

@@ -93,6 +93,7 @@ export async function interpret(node, env) {
       switch (node.op) {
         case "-": return -v;
         case "!": return !v;
+        case "~": return ~v;
       }
       break;
     }
@@ -126,6 +127,11 @@ export async function interpret(node, env) {
         case "<": return l < r;
         case ">=": return l >= r;
         case "<=": return l <= r;
+        case "|": return l | r;
+        case "&": return l & r;
+        case "^": return l ^ r;
+        case "<<": return l << r;
+        case ">>": return l >> r;
       }
       break;
     }

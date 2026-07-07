@@ -520,6 +520,8 @@ function emitWasmExpr(node, bytes, wasm, funcName) {
         ">": OP.I32_GT_S, "<": OP.I32_LT_S,
         ">=": OP.I32_GE_S, "<=": OP.I32_LE_S,
         "&&": OP.I32_AND, "||": OP.I32_OR,
+        "|": OP.I32_OR, "&": OP.I32_AND, "^": OP.I32_XOR,
+        "<<": OP.I32_SHL, ">>": OP.I32_SHR_S,
       };
       emitWasmExpr(node.left, bytes, wasm, funcName);
       emitWasmExpr(node.right, bytes, wasm, funcName);
@@ -536,6 +538,9 @@ function emitWasmExpr(node, bytes, wasm, funcName) {
       }
       if (node.op === "!") {
         bytes.push(OP.I32_EQZ);
+      }
+      if (node.op === "~") {
+        bytes.push(OP.I32_CONST, 0xff, 0xff, 0xff, 0xff, OP.I32_XOR);
       }
       break;
     }
