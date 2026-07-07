@@ -34,6 +34,9 @@ GERENCIADOR DE PACOTES:
   xs install [pacote]    Instala dependências
   xs publish             Publica pacote no registro
   xs search <termo>      Busca pacotes
+  xs login               Login no registro
+  xs whoami              Mostra usuário logado
+  xs logout              Logout do registro
 
 TESTES:
   xs test [dir]          Roda todos os testes (*test*.xs)
@@ -76,6 +79,24 @@ if (!cmd || cmd === "help") {
     if (cmd === "search") {
       const { searchPackages } = await import("./pkgmgr.js");
       await searchPackages(rest.join(" "));
+      return;
+    }
+
+    if (cmd === "login") {
+      const { loginUser } = await import("./pkgmgr.js");
+      await loginUser();
+      return;
+    }
+
+    if (cmd === "whoami") {
+      const { whoami } = await import("./pkgmgr.js");
+      whoami();
+      return;
+    }
+
+    if (cmd === "logout") {
+      const { logoutUser } = await import("./pkgmgr.js");
+      logoutUser();
       return;
     }
 

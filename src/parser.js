@@ -220,23 +220,42 @@ export function parse(tokens) {
 
     function parseVarDecl(expectSemi = true) {
         expect("CRIA");
-        const idTok = expect("IDENT");
-        A.setLoc(idTok.loc);
-        const id = idTok.value;
+        A.setLoc(peek().loc);
+        let lvalue;
+        if (peek().type === "ISTO") {
+            next();
+            lvalue = A.ThisExpr();
+        } else {
+            const idTok = expect("IDENT");
+            A.setLoc(idTok.loc);
+            lvalue = A.Ident(idTok.value);
+        }
         let type = null;
         if (peek().type === ":") {
             next();
             type = expect("IDENT").value;
+        }
+        while (peek().type === ".") {
+            next();
+            const prop = expect("IDENT").value;
+            lvalue = A.Member(lvalue, prop);
+        }
+        while (peek().type === "[") {
+            next();
+            const idx = parseExpr();
+            expect("]");
+            lvalue = A.IndexExpr(lvalue, idx);
         }
         let init = null;
         if (peek().type === "=") {
             next();
             init = parseExpr();
         }
-
         if (expectSemi) optionalSemicolon();
-
-        return { ...A.VarDecl(id, init), typeHint: type };
+        if (lvalue.type === "Ident") {
+            return { ...A.VarDecl(lvalue.name, init), typeHint: type };
+        }
+        return { ...A.Assign(lvalue, init), typeHint: type };
     }
 
     function parseIf() {

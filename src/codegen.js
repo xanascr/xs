@@ -87,6 +87,8 @@ export function generate(node) {
       return `continue;`;
     case "Ternary":
       return `(${generate(node.test)}?${generate(node.cons)}:${generate(node.alt)})`;
+    case "ThisExpr":
+      return `this`;
     default:
       throw new Error("Node não suportado: " + node.type);
   }
