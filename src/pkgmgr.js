@@ -240,6 +240,7 @@ export async function installPackages(packages) {
     }
   }
 
+  const visited = new Set();
   for (const pkgName of packages) {
     const [name, version] = pkgName.includes("@")
       ? pkgName.split("@")
@@ -248,7 +249,7 @@ export async function installPackages(packages) {
     console.log(` Installing ${name}...`);
 
     try {
-      const installed = await installFromRegistry(name, version);
+      const installed = await installFromRegistry(name, version, visited);
       if (installed) {
         const pkgFile = findPackageFile();
         if (pkgFile) {
@@ -271,10 +272,30 @@ function sanitizePkgName(name) {
   return safe;
 }
 
-async function installFromRegistry(name, version) {
+async function installFromRegistry(name, version, visited = new Set()) {
   name = sanitizePkgName(name);
+  if (visited.has(name)) return true; // already installed or in progress
+  visited.add(name);
+
   const distDir = path.join(XS_CACHE_DIR, name);
-  if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
+  if (fs.existsSync(distDir)) {
+    // Already installed, just resolve deps
+    const metaPath = path.join(distDir, ".xs-meta.json");
+    if (fs.existsSync(metaPath)) {
+      const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+      if (meta.dependencies && meta.dependencies.length > 0) {
+        for (const dep of meta.dependencies) {
+          if (!visited.has(dep)) {
+            console.log(`   resolving dependency ${dep}...`);
+            await installFromRegistry(dep, "latest", visited);
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  fs.mkdirSync(distDir, { recursive: true });
 
   // Try the XanaScript registry first (only approved packages)
   try {
@@ -282,13 +303,29 @@ async function installFromRegistry(name, version) {
     if (infoRes.ok) {
       const info = await infoRes.json();
       if (info.ok && info.package && info.package.status === "approved") {
+        const pkgInfo = info.package;
+
+        // Install dependencies first
+        if (pkgInfo.dependencies && pkgInfo.dependencies.length > 0) {
+          for (const dep of pkgInfo.dependencies) {
+            if (!visited.has(dep)) {
+              console.log(`   installing dependency ${dep}...`);
+              await installFromRegistry(dep, "latest", visited);
+            }
+          }
+        }
+
+        // Save metadata for future dep resolution
+        const meta = { name, version: pkgInfo.version, dependencies: pkgInfo.dependencies || [] };
+        fs.writeFileSync(path.join(distDir, ".xs-meta.json"), JSON.stringify(meta, null, 2));
+
+        // Download the package tarball
         const dlRes = await fetch(
           `${XS_REGISTRY}/api/packages/${name}/download`,
           { method: "POST" }
         );
         if (dlRes.ok && dlRes.headers.get("Content-Type")?.includes("gzip")) {
           const buffer = Buffer.from(await dlRes.arrayBuffer());
-          // Extract the tarball
           await extractTarball(buffer, distDir);
           return true;
         }
