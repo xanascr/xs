@@ -263,6 +263,8 @@ export function run(code) {
 
       case OP.HALT:
         return last;
+      default:
+        throw new VMError(`Opcode desconhecido: ${op}`);
     }
 
     ip++;

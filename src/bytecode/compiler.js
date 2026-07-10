@@ -75,6 +75,7 @@ export function compile(ast) {
           case "^": emit(OP.BIT_XOR); break;
           case "<<": emit(OP.BIT_SHL); break;
           case ">>": emit(OP.BIT_SHR); break;
+          default: throw new Error(`Operador binário desconhecido no bytecode: ${node.op}`);
         }
 
         break;

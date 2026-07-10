@@ -401,7 +401,9 @@ function simpleWatch(file) {
             }
           }
         }
-      } catch {}
+      } catch (e) {
+        console.error("  Erro ao checar arquivo:", e.message);
+      }
     }
   });
 }

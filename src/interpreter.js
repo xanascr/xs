@@ -90,6 +90,7 @@ export async function interpret(node, env) {
         case "-": return -v;
         case "!": return !v;
         case "~": return ~v;
+        default: throw new XSError(`Operador unário desconhecido: ${node.op}`, node.loc);
       }
       break;
     }
@@ -107,7 +108,7 @@ export async function interpret(node, env) {
       if (node.op === "~=") {
         const l = String(await interpret(node.left, env));
         const r = String(await interpret(node.right, env));
-        return new RegExp(r).test(l);
+        try { return new RegExp(r).test(l); } catch { throw new XSError(`Expressão regular inválida: ${r}`, node.loc); }
       }
       const l = await interpret(node.left, env);
       const r = await interpret(node.right, env);
@@ -128,6 +129,7 @@ export async function interpret(node, env) {
         case "^": return l ^ r;
         case "<<": return l << r;
         case ">>": return l >> r;
+        default: throw new XSError(`Operador binário desconhecido: ${node.op}`, node.loc);
       }
       break;
     }
@@ -215,7 +217,7 @@ export async function interpret(node, env) {
         }
         if (name === "ENCONTRA") {
           const args = []; for (const a of node.args) args.push(await interpret(a, env));
-          return String(args[0])?.match(new RegExp(args[1]));
+          try { return String(args[0])?.match(new RegExp(args[1])); } catch { throw new XSError(`Expressão regular inválida: ${args[1]}`, node.loc); }
         }
         if (name === "DECODIFICA_URL") {
           const args = []; for (const a of node.args) args.push(await interpret(a, env));
