@@ -3,12 +3,21 @@
   "version": "2.2.8",
   "description": "Programming language with Portuguese syntax, optimizing compiler, built-in ORM, and WebAssembly support",
   "type": "module",
+  "workspaces": [
+    "xs-site",
+    "xs-vscode",
+    "xs-examples"
+  ],
   "bin": {
     "xs": "bin/xs.js"
   },
   "scripts": {
     "build": "node scripts/build-all.js",
-    "test": "node test/lexer.test.js && node test/parser.test.js && node test/interpreter.test.js"
+    "test": "node test/lexer.test.js && node test/parser.test.js && node test/interpreter.test.js",
+    "test:xs": "node bin/xs.js test test/completo_test.xs",
+    "test:all": "node test/run.js && node bin/xs.js test test/completo_test.xs",
+    "lint": "node bin/xs.js fmt --check src/",
+    "clean": "rm -rf dist node_modules xs-site/node_modules xs-vscode/node_modules"
   },
   "repository": {
     "type": "git",
