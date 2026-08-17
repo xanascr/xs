@@ -95,14 +95,14 @@ resolve quadrado(x) {
 manda-ai quadrado
 
 // main.xs
-traz-ai "utils"
+traz-ai "./utils.xs"
 grita-ae(quadrado(4))   // 16
 ```
 
 ## HTTP Server
 
 ```xs
-escuta(3000, (req, res) => {
+cria srv = escuta(3000, (req, res) => {
   res.status(200).json({
     url: req.url,
     metodo: req.metodo,
@@ -110,6 +110,10 @@ escuta(3000, (req, res) => {
   })
 })
 grita-ae("Servidor rodando em http://localhost:3000")
+
+// later, to stop the server:
+aguenta-ai(5000)
+terminamos!(srv)
 ```
 
 ## Tests

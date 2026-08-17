@@ -32,15 +32,15 @@ fofoca app = { v: 1 }       // global
 
 ## Data Types
 
-| Type | Example |
-|------|---------|
-| Number | `10`, `3.14`, `-5` |
-| String | `"texto"`, `'texto'` |
-| Boolean | `verdadeiro`, `falso` |
-| Null | `nulo` |
-| Array | `[1, 2, 3]` |
-| Object | `{ nome: "Joao", idade: 30 }` |
-| Template | `` `Ola, ${nome}!` `` |
+| Type     | Example                       |
+| -------- | ----------------------------- |
+| Number   | `10`, `3.14`, `-5`            |
+| String   | `"texto"`, `'texto'`          |
+| Boolean  | `verdadeiro`, `falso`         |
+| Null     | `nulo`                        |
+| Array    | `[1, 2, 3]`                   |
+| Object   | `{ nome: "Joao", idade: 30 }` |
+| Template | `` `Ola, ${nome}!` ``         |
 
 ## Operators
 
@@ -245,7 +245,7 @@ resolve soma(a, b) {
 manda-ai soma
 
 // main.xs
-traz-ai "math"
+traz-ai "./math.xs"
 grita-ae(soma(2, 3))
 ```
 
