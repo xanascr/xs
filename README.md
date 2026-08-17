@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://avatars.githubusercontent.com/u/299560478?s=48&v=4" width="120" alt="XanaScript">
   <h1 align="center">XanaScript</h1>
-  <p align="center">A programming language with Portuguese syntax, optimizing compiler, built-in ORM, and native WebAssembly support.</p>
+  <p align="center">A typed programming language with Portuguese syntax, an optimizing compiler, a built-in ORM, and native WebAssembly support.</p>
   <p align="center">
     <a href="https://www.npmjs.com/package/xanascript"><img src="https://img.shields.io/npm/v/xanascript.svg?style=flat&color=%23f58b8e" alt="npm"></a>
     <a href="https://github.com/xanascr/xs/actions"><img src="https://img.shields.io/github/actions/workflow/status/xanascr/xs/ci.yml?style=flat&color=%23f58b8e" alt="CI"></a>
@@ -10,82 +10,89 @@
   </p>
 </p>
 
+XanaScript is a strong-typed programming language with Portuguese keywords, built for readability and speed. It ships with an optimizing compiler that targets JavaScript and WebAssembly, a bytecode VM, a built-in ORM, compile-time macros, and zero runtime dependencies.
+
 ## Installation
 
 ```bash
 npm install -g xanascript
 ```
 
-Node.js 18+ required.
+Requires Node.js 18+.
 
 ## Quick Start
 
 ```xs
-PARTIU()
+cria nome = "Maria"
+cria idade = 30
 
-CHAMA ESSE CARA fib(n) {
-  SE LIGA SO (n <= 1) { VOLTA n }
-  VOLTA fib(n - 1) + fib(n - 2)
+resolve sauda(pessoa) {
+  volta "Oi, " + pessoa + "!"
 }
 
-SOLTA O GRITO("fib(10) =", fib(10))
-
-ACABOU()
+grita-ae(sauda(nome))
 ```
 
 ```bash
-xs run hello.xs
+xana run hello.xs
+# "Oi, Maria!"
 ```
 
 ## Documentation
 
-| Language | Link |
-|----------|------|
-| English | [Getting Started](docs/en/getting-started.md) |
-| Português | [Começando](docs/pt-br/comecando.md) |
-| Español | [Introducción](docs/es/introduccion.md) |
-| LLM Reference | [llms.txt](llms.txt) |
+- [Getting Started](docs/getting-started.md)
+- [Syntax Reference](docs/syntax.md)
+- [Type System](docs/types.md)
+- [Standard Library](docs/stdlib.md)
+- [ORM](docs/orm.md)
+- [CLI Reference](docs/cli.md)
+- [Examples](docs/examples.md)
+- [LLM Reference](llms.txt)
 
 ## Features
 
+- **Typed** — strong static typing with inference (`xana check`)
 - **Portuguese syntax** — keywords in Portuguese for accessibility
-- **Optimizing compiler** — generates JavaScript and WebAssembly
-- **Built-in ORM** — `CRIA REPOSITORIO` for database operations
-- **Package manager** — `xs install`, `xs publish` via [xanascript.xyz/packages](https://xanascript.xyz/packages)
+- **Optimizing compiler** — JavaScript and WebAssembly output
+- **Bytecode VM** — stack-based VM for fast execution
+- **Built-in ORM** — JSON-backed CRUD with validation
+- **Package manager** — `xana install`, `xana publish`
 - **LSP support** — IDE integration with diagnostics and autocomplete
-- **Bytecode VM** — stack-based virtual machine for fast execution
-- **Macros** — compile-time code generation and transformation
-- **Test runner** — native test framework (`xs test`)
-- **Source maps** — error mapping back to `.xs` source lines
+- **Macros** — compile-time code generation
+- **Test runner** — native test framework (`xana test`)
+- **Source maps** — errors mapped back to `.xs` source lines
 
 ## CLI
 
 ```
-xs run <file>         Execute .xs (AST interpreter)
-xs vm <file>          Execute .xs (bytecode VM)
-xs check <file>       Check syntax
-xs fmt <file>         Format code
-xs build <file>       Generate JavaScript
-xs build --opt <file> Optimized JS with type inference
-xs build --wasm <file> WebAssembly output
-xs build --standalone Single-file JS with runtime
-xs test               Run tests (*test*.xs)
-xs dev <file>         Watch mode with hot reload
-xs repl               Interactive REPL
-xs lsp                Language Server Protocol
-xs init [dir]         Create new project
-xs install <pkg>      Install package from registry
-xs publish            Publish package to registry
-xs search <term>      Search packages
-xs bench              Run benchmarks
-xs docs src/ out/     Generate HTML documentation
+xana run <file>          Run .xs (AST interpreter)          [roda]
+xana vm <file>           Run .xs (bytecode VM)              [roda --vm]
+xana check <file>        Type-check without executing       [verifica]
+xana fmt <file>          Format code                        [ajeita]
+xana build <file>        Generate JavaScript                [monta]
+xana build --opt <file>  Optimized JS with type inference   [--otimizado]
+xana build --wasm <file> WebAssembly output
+xana build --standalone  Single-file JS with runtime        [--sozinho]
+xana test [dir]          Run tests (*test*.xs)              [teste]
+xana test --watch        Watch mode for tests               [teste --olha]
+xana dev [file]          Watch mode with hot reload         [vigia]
+xana repl                Interactive REPL                   [bate-papo]
+xana lsp                 Language Server Protocol           [fala-com-ide]
+xana init [dir]          Create a new project               [rascunho]
+xana install <pkg>       Install a package from the registry [bota-ai]
+xana publish             Publish a package to the registry  [solta-ai]
+xana search <term>       Search packages                    [stalkeia]
+xana bench               Run benchmarks                     [mede]
+xana docs src/ out/      Generate HTML documentation        [documenta]
 ```
+
+Every command has a Portuguese alias (shown in `[brackets]`); both forms work.
 
 ## Architecture
 
 ```
 .xs source → Lexer → Parser → Optimizer → Codegen (JS / Wasm / Bytecode)
-                                        ↘ Interpreter (AST walk)
+                                    ↘ Interpreter (AST walk)
 ```
 
 | Module | Purpose |
@@ -93,6 +100,7 @@ xs docs src/ out/     Generate HTML documentation
 | `lexer.js` | Tokenization with line/col tracking |
 | `parser.js` | AST generation with error recovery |
 | `optimizer.js` | Macros, constant folding, dead code elimination |
+| `typecheck.js` | Static type checking and inference |
 | `interpreter.js` | AST-walking interpreter |
 | `runtime.js` | Built-in functions and environment |
 | `codegen.js` | JavaScript code generation |
@@ -106,7 +114,7 @@ xs docs src/ out/     Generate HTML documentation
 | `docsgen.js` | HTML documentation generator |
 | `orm.js` | Built-in ORM |
 | `macros.js` | Compile-time macro expansion |
-| `errors.js` | Rust-style error reporting with hints |
+| `errors.js` | Categorized error reporting with hints and suggestions |
 | `sourcemap.js` | JS→XS source mapping |
 
 ## Ecosystem

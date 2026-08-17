@@ -1,60 +1,56 @@
-PARTIU()
-
-CHAMA ESSE CARA soma(a, b) {
-  VOLTA a + b
+resolve soma(a, b) {
+  volta a + b
 }
 
-CHAMA ESSE CARA sub(a, b) {
-  VOLTA a - b
+resolve sub(a, b) {
+  volta a - b
 }
 
-CHAMA ESSE CARA mul(a, b) {
-  VOLTA a * b
+resolve mul(a, b) {
+  volta a * b
 }
 
-CHAMA ESSE CARA div(a, b) {
-  VOLTA a / b
+resolve div(a, b) {
+  volta a / b
 }
 
-CHAMA ESSE CARA mod(a, b) {
-  VOLTA a % b
+resolve mod(a, b) {
+  volta a % b
 }
 
-CHAMA ESSE CARA abs(n) {
-  SE LIGA SO (n < 0) {
-    VOLTA -n
+resolve abs(n) {
+  se-pah (n < 0) {
+    volta -n
   }
-  VOLTA n
+  volta n
 }
 
-CHAMA ESSE CARA max(a, b) {
-  SE LIGA SO (a > b) {
-    VOLTA a
+resolve max(a, b) {
+  se-pah (a > b) {
+    volta a
   }
-  VOLTA b
+  volta b
 }
 
-CHAMA ESSE CARA min(a, b) {
-  SE LIGA SO (a < b) {
-    VOLTA a
+resolve min(a, b) {
+  se-pah (a < b) {
+    volta a
   }
-  VOLTA b
+  volta b
 }
 
-CHAMA ESSE CARA clamp(val, min, max) {
-  SE LIGA SO (val < min) { VOLTA min }
-  SE LIGA SO (val > max) { VOLTA max }
-  VOLTA val
+resolve clamp(val, min, max) {
+  se-pah (val < min) { volta min }
+  se-pah (val > max) { volta max }
+  volta val
 }
 
-EXPORTA soma
-EXPORTA sub
-EXPORTA mul
-EXPORTA div
-EXPORTA mod
-EXPORTA abs
-EXPORTA max
-EXPORTA min
-EXPORTA clamp
-
-ACABOU()
+manda-ai soma
+manda-ai sub
+manda-ai mul
+manda-ai div
+manda-ai mod
+manda-ai abs
+manda-ai max
+manda-ai min
+manda-ai clamp

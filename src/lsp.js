@@ -6,39 +6,87 @@ import { parse } from "./parser.js";
 import { setSource, XSError } from "./errors.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const LSP_VERSION = JSON.parse(fs.readFileSync(resolve(__dirname, "../package.json"), "utf-8")).version;
+const LSP_VERSION = JSON.parse(
+  fs.readFileSync(resolve(__dirname, "../package.json"), "utf-8")
+).version;
 
 const KEYWORDS = [
-  "PARTIU", "ACABOU", "CRIA", "SE", "LIGA", "SO", "SENAO",
-  "REPETE", "NA", "MORAL", "CHAMA", "ESSE", "CARA", "VOLTA",
-  "IMPORTA", "EXPORTA", "SOLTA", "O", "GRITO", "FALA", "BAIXO",
-  "AGORA", "VAI", "ESPERA", "AI", "SORTEIA", "PARSEIA", "OUVE",
-  "AQUI", "VERDADEIRO", "FALSO", "NULO", "TENTA", "PEGA", "ERRO",
-  "ASSINCRONO", "VOA", "CONTINUA", "CLASSE", "HERDA", "CONSTRUTOR",
-  "ISTO", "NOVA", "METODO", "ESCOLHE", "CASO", "PADRAO", "COMBINA",
-  "SERVIDOR", "PARA", "TAMANHO", "DIVIDE", "TEXTO",
-  "ENCONTRA", "DECODIFICA", "URL", "JUNTAR", "TESTE", "AFIRMA",
-  "ASSUNTO", "TAREFA", "MACRO",
+  "cria",
+  "lei",
+  "fofoca",
+  "se-pah",
+  "ai",
+  "repete-na-moral",
+  "repete-enquanto",
+  "resolve",
+  "volta",
+  "traz-ai",
+  "manda-ai",
+  "grita-ae",
+  "sussurra",
+  "horinha",
+  "stalkeia",
+  "aguenta-ai",
+  "escolhe",
+  "desembola",
+  "bisbilhota",
+  "verdadeiro",
+  "falso",
+  "nulo",
+  "tenta",
+  "fodeu",
+  "no-fim",
+  "assincrono",
+  "mete-o-pe",
+  "segue-o-baile",
+  "classe",
+  "herda",
+  "spawna",
+  "esse-cara",
+  "novo",
+  "metodo",
+  "vai-de",
+  "se-for",
+  "se-nao-der",
+  "ve-se",
+  "bateu-com",
+  "qualquer-coisa",
+  "escuta",
+  "terminamos!",
+  "tamanho",
+  "divide-texto",
+  "encontra",
+  "decodifica-url",
+  "juntar",
+  "crush",
+  "deu-match",
+  "date",
+  "tarefa",
+  "DB",
+  "tpm",
+  "tipo-de",
+  "instancia-de",
 ];
 
 const BUILTIN_FUNCTIONS = [
-  { name: "SOLTA_O_GRITO", params: "...args", doc: "console.log()" },
-  { name: "FALA_BAIXO", params: "...args", doc: "console.warn()" },
-  { name: "AGORA_VAI", params: "url", doc: "HTTP GET request" },
-  { name: "ESPERA_AI", params: "ms", doc: "setTimeout()" },
-  { name: "SORTEIA", params: "min, max", doc: "Random integer" },
-  { name: "PARSEIA", params: "json", doc: "JSON.parse()" },
-  { name: "OUVE_AQUI", params: "chave", doc: "ENV variable" },
-  { name: "TAMANHO", params: "valor", doc: "Length of array/string" },
-  { name: "DIVIDE_TEXTO", params: "texto, separador", doc: "String split" },
-  { name: "ENCONTRA", params: "texto, regex", doc: "Regex match" },
-  { name: "DECODIFICA_URL", params: "url", doc: "URL decode" },
-  { name: "JUNTAR", params: "array, separador", doc: "Array join" },
-  { name: "AGORA", params: "", doc: "Date.now()" },
-  { name: "AFIRMA", params: "condicao", doc: "Assert truthy" },
-  { name: "ASSUNTO", params: "a, b", doc: "Assert equal" },
-  { name: "CRIA_SERVIDOR", params: "porta, handler", doc: "Create HTTP server" },
-  { name: "PARA_SERVIDOR", params: "server", doc: "Stop HTTP server" },
+  { name: "grita-ae", params: "...args", doc: "console.log()" },
+  { name: "sussurra", params: "...args", doc: "console.warn()" },
+  { name: "stalkeia", params: "url", doc: "HTTP GET request" },
+  { name: "aguenta-ai", params: "ms", doc: "setTimeout()" },
+  { name: "escolhe", params: "min, max", doc: "Random integer" },
+  { name: "desembola", params: "json", doc: "JSON.parse()" },
+  { name: "bisbilhota", params: "key", doc: "ENV variable" },
+  { name: "tamanho", params: "value", doc: "Length of array/string" },
+  { name: "divide-texto", params: "text, separator", doc: "String split" },
+  { name: "encontra", params: "text, regex", doc: "Regex match" },
+  { name: "decodifica-url", params: "url", doc: "URL decode" },
+  { name: "juntar", params: "array, separator", doc: "Array join" },
+  { name: "horinha", params: "", doc: "Date.now()" },
+  { name: "traduz-ai", params: "value", doc: "Convert to string" },
+  { name: "deu-match", params: "condition", doc: "Assert truthy" },
+  { name: "date", params: "a, b", doc: "Assert equal" },
+  { name: "escuta", params: "port, handler", doc: "Create HTTP server" },
+  { name: "terminamos!", params: "server", doc: "Stop HTTP server" },
 ];
 
 let documents = new Map();
@@ -100,6 +148,7 @@ function handleMessage(msg) {
             hoverProvider: true,
             definitionProvider: true,
             diagnosticProvider: true,
+            renameProvider: true,
           },
           serverInfo: { name: "xanascript-lsp", version: LSP_VERSION },
         },
@@ -107,7 +156,11 @@ function handleMessage(msg) {
       break;
 
     case "initialized":
-      sendMessage({ jsonrpc: "2.0", method: "window/logMessage", params: { type: 3, message: "XanaScript LSP iniciado" } });
+      sendMessage({
+        jsonrpc: "2.0",
+        method: "window/logMessage",
+        params: { type: 3, message: "XanaScript LSP started" },
+      });
       break;
 
     case "textDocument/didOpen":
@@ -116,7 +169,7 @@ function handleMessage(msg) {
       const text = params.textDocument?.text || params.contentChanges?.[0]?.text;
       if (uri && text) {
         documents.set(uri, text);
-        validateDocument(uri, text);
+        validateDocument(uri, text).catch(console.error);
       }
       break;
     }
@@ -133,7 +186,8 @@ function handleMessage(msg) {
       const col = params.position?.character || 0;
       const text = documents.get(uri);
       if (text) {
-        const items = getCompletions(text, line, col);
+        const members = memberCompletions(text, line, col);
+        const items = members || getCompletions(text, line, col);
         sendMessage({ jsonrpc: "2.0", id, result: { isIncomplete: false, items } });
       }
       break;
@@ -163,6 +217,21 @@ function handleMessage(msg) {
       break;
     }
 
+    case "textDocument/rename": {
+      const uri = params.textDocument?.uri;
+      const line = params.position?.line || 0;
+      const col = params.position?.character || 0;
+      const newName = params.newName;
+      const text = documents.get(uri);
+      if (text && newName) {
+        const edits = buildRename(text, line, col, newName);
+        sendMessage({ jsonrpc: "2.0", id, result: { changes: { [uri]: edits } } });
+      } else {
+        sendMessage({ jsonrpc: "2.0", id, result: null });
+      }
+      break;
+    }
+
     case "shutdown":
       sendMessage({ jsonrpc: "2.0", id, result: null });
       break;
@@ -173,13 +242,30 @@ function handleMessage(msg) {
   }
 }
 
-function validateDocument(uri, text) {
+async function validateDocument(uri, text) {
   setSource(text, uri);
   const diagnostics = [];
 
   try {
     const tokens = lex(text);
-    parse(tokens);
+    const ast = parse(tokens);
+    try {
+      const { checkTypes } = await import("./typecheck.js");
+      for (const e of checkTypes(ast)) {
+        const loc = e.loc || { line: 1, column: 1 };
+        diagnostics.push({
+          range: {
+            start: { line: loc.line - 1, character: (loc.column || 1) - 1 },
+            end: { line: loc.line - 1, character: (loc.column || 1) + 10 },
+          },
+          severity: 1,
+          message: e.message,
+          source: "xanascript",
+        });
+      }
+    } catch {
+      // typecheck is best-effort in LSP; without typing it does not block
+    }
   } catch (e) {
     const loc = e.loc || { line: 1, column: 1 };
     diagnostics.push({
@@ -243,7 +329,7 @@ function getHover(text, line, col) {
   const word = getWordAt(text, line, col);
   if (!word) return null;
 
-  const fn = BUILTIN_FUNCTIONS.find(f => f.name === word);
+  const fn = BUILTIN_FUNCTIONS.find((f) => f.name === word);
   if (fn) {
     return {
       contents: {
@@ -257,7 +343,17 @@ function getHover(text, line, col) {
     return {
       contents: {
         kind: "markdown",
-        value: `\`\`\`xs\n${word}\n\`\`\`\n\nPalavra-chave XanaScript`,
+        value: `\`\`\`xs\n${word}\n\`\`\`\n\nXanaScript keyword`,
+      },
+    };
+  }
+
+  const type = inferTypeAt(text, word, line, col);
+  if (type) {
+    return {
+      contents: {
+        kind: "markdown",
+        value: `\`\`\`xs\n${word}: ${type}\n\`\`\``,
       },
     };
   }
@@ -270,10 +366,10 @@ function getDefinition(text, line, col) {
   if (!word) return null;
 
   const patterns = [
-    new RegExp(`CHAMA\\s+ESSE\\s+CARA\\s+${word}\\b`),
-    new RegExp(`CRIA\\s+${word}\\b`),
-    new RegExp(`CLASSE\\s+${word}\\b`),
-    new RegExp(`TAREFA\\s+${word}\\b`),
+    new RegExp(`resolve\\s+${word}\\b`),
+    new RegExp(`cria\\s+${word}\\b`),
+    new RegExp(`classe\\s+${word}\\b`),
+    new RegExp(`tarefa\\s+${word}\\b`),
   ];
 
   const lines = text.split("\n");
@@ -304,10 +400,130 @@ function getWordAt(text, line, col) {
 
   let start = col;
   let end = col;
-  while (start > 0 && /[a-zA-Z0-9_]/.test(lineText[start - 1])) start--;
-  while (end < lineText.length && /[a-zA-Z0-9_]/.test(lineText[end])) end++;
+  while (start > 0 && /[a-zA-Z0-9_-]/.test(lineText[start - 1])) start--;
+  while (end < lineText.length && /[a-zA-Z0-9_-]/.test(lineText[end])) end++;
 
   return start < end ? lineText.slice(start, end) : null;
+}
+
+function inferTypeAt(text, word, line, col) {
+  const lines = text.split("\n");
+
+  // Encontra a declaração mais próxima antes da posição
+  for (let i = line; i >= 0; i--) {
+    // cria <name> = ...
+    let m = lines[i].match(
+      new RegExp(`cria\\s+${word}\\s*(?::\\s*([a-zA-Z0-9-?]+))?\\s*=\\s*(.+)$`)
+    );
+    if (m) {
+      const hint = m[1];
+      if (hint) return hint;
+      const init = m[2].trim();
+      return inferExprType(init);
+    }
+    // resolve <name>(params) -> fn
+    m = lines[i].match(new RegExp(`resolve\\s+${word}\\s*\\(([^)]*)\\)`));
+    if (m) {
+      const params = m[1].trim() ? m[1].split(",").map((p) => p.trim()).length : 0;
+      return `faz-ai (${params} param${params === 1 ? "" : "s"})`;
+    }
+  }
+  return null;
+}
+
+function inferExprType(expr) {
+  expr = expr.trim();
+  if (/^-?\d+(\.\d+)?$/.test(expr)) return "eh-numero";
+  if (expr === "verdadeiro" || expr === "falso") return "vdd?";
+  if (expr === "nulo") return "eh-nada";
+  if (expr.startsWith('"') || expr.startsWith("'")) return "eh-palavra";
+  if (expr.startsWith("[") && expr.endsWith("]")) return "sus";
+  if (expr.startsWith("{") && expr.endsWith("}")) return "bagulho";
+  if (expr.includes("(") && expr.includes(")")) return "faz-ai";
+  return "sla";
+}
+
+function buildRename(text, line, col, newName) {
+  const word = getWordAt(text, line, col);
+  if (!word || newName === word) return [];
+  const lines = text.split("\n");
+  const edits = [];
+  const re = new RegExp(`(?<![a-zA-Z0-9_-])${escapeRegExp(word)}(?![a-zA-Z0-9_-])`, "g");
+  for (let i = 0; i < lines.length; i++) {
+    let m;
+    re.lastIndex = 0;
+    while ((m = re.exec(lines[i])) !== null) {
+      edits.push({
+        range: {
+          start: { line: i, character: m.index },
+          end: { line: i, character: m.index + word.length },
+        },
+        newText: newName,
+      });
+    }
+  }
+  return edits;
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function memberCompletions(text, line, col) {
+  const lines = text.split("\n");
+  const lineText = lines[line] || "";
+  const prefix = lineText.slice(0, col);
+
+  // padrão: <expr>.  (após o ponto)
+  const m = prefix.match(/\.\s*([a-zA-Z0-9_-]*)$/);
+  if (!m) return null;
+
+  const beforeDot = prefix.slice(0, prefix.lastIndexOf(".")).trim();
+  const varName = beforeDot.match(/([a-zA-Z0-9_-]+)\s*$/)?.[1];
+  if (!varName) return null;
+
+  // descobre o tipo da variável
+  let type = null;
+  for (const l of lines) {
+    const dm = l.match(new RegExp(`cria\\s+${varName}\\s*=\\s*(.+)$`));
+    if (dm) type = inferExprType(dm[1].trim());
+  }
+  if (!type) return null;
+
+  const members = {
+    "eh-palavra": [
+      ["toUpperCase", "eh-palavra"],
+      ["toLowerCase", "eh-palavra"],
+      ["indexOf", "eh-numero"],
+      ["slice", "eh-palavra"],
+      ["split", "sus"],
+      ["trim", "eh-palavra"],
+      ["replace", "eh-palavra"],
+      ["length", "eh-numero"],
+    ],
+    sus: [
+      ["push", "eh-numero"],
+      ["pop", "sla"],
+      ["length", "eh-numero"],
+      ["join", "eh-palavra"],
+      ["reverse", "sus"],
+      ["slice", "sus"],
+      ["indexOf", "eh-numero"],
+      ["map", "sus"],
+    ],
+    bagulho: [["toString", "eh-palavra"]],
+  }[type];
+
+  if (!members) return null;
+  return members.map(([name, ret]) => ({
+    label: name,
+    kind: 7,
+    detail: `${name}: ${ret}`,
+    insertText:
+      name +
+      (ret === "eh-palavra" || ret === "eh-numero" || ret === "sus" || ret === "sla" ? "($1)" : ""),
+    insertTextFormat: 2,
+  }));
 }
 
 export function startLSP() {

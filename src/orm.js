@@ -5,7 +5,7 @@ let lockMap = new Map();
 
 async function withLock(key, fn) {
   while (lockMap.get(key)) {
-    await new Promise(r => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 10));
   }
   lockMap.set(key, true);
   try {
@@ -15,33 +15,44 @@ async function withLock(key, fn) {
   }
 }
 
-export const TIPOS_MAP = {
+export const TYPE_MAP = {
   TEXTO: "string",
   NUMERO: "number",
   BOOLEANO: "boolean",
   DATA: "string",
   QUALQUER: "any",
+  "eh-palavra": "string",
+  "eh-numero": "number",
+  "eh-booleano": "boolean",
+  "eh-data": "string",
+  "eh-qualquer": "any",
+  "vdd?": "boolean",
+  data: "string",
 };
 
-let nextIds = new Map();
+const nextIds = new Map();
 
-export function criarRepositorio(nomeTabela, props, diretorio) {
-  const dir = diretorio || process.cwd();
-  const dbFile = path.join(dir, `${nomeTabela}.json`);
+export function createRepository(tableName, props, directory) {
+  const dir = directory || process.cwd();
+  const dbDir = path.join(dir, ".db");
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  const dbFile = path.join(dbDir, `${tableName}.json`);
   const backupFile = dbFile + ".bak";
 
-  let dados = [];
+  let records = [];
   if (fs.existsSync(dbFile)) {
     try {
-      dados = JSON.parse(fs.readFileSync(dbFile, "utf-8"));
+      records = JSON.parse(fs.readFileSync(dbFile, "utf-8"));
     } catch (e) {
       try {
         const bak = fs.readFileSync(backupFile, "utf-8");
-        dados = JSON.parse(bak);
+        records = JSON.parse(bak);
         fs.writeFileSync(dbFile, bak, "utf-8");
-        console.warn(`   Backup restaurado para ${nomeTabela}.json`);
+        console.warn(`   Backup restored to ${tableName}.json`);
       } catch {
-        dados = [];
+        records = [];
         fs.writeFileSync(dbFile, "[]", "utf-8");
       }
     }
@@ -49,114 +60,143 @@ export function criarRepositorio(nomeTabela, props, diretorio) {
     fs.writeFileSync(dbFile, "[]", "utf-8");
   }
 
-  let salvarQueue = Promise.resolve();
-  function salvar() {
-    salvarQueue = salvarQueue.then(() => {
+  let saveQueue = Promise.resolve();
+  function save() {
+    saveQueue = saveQueue.then(() => {
       try {
         if (fs.existsSync(dbFile)) {
           fs.copyFileSync(dbFile, backupFile);
         }
-        fs.writeFileSync(dbFile, JSON.stringify(dados, null, 2), "utf-8");
+        fs.writeFileSync(dbFile, JSON.stringify(records, null, 2), "utf-8");
       } catch (e) {
-        console.error(`   Erro ao salvar ${nomeTabela}: ${e.message}`);
+        console.error(`   Error saving ${tableName}: ${e.message}`);
       }
     });
-    return salvarQueue;
+    return saveQueue;
   }
 
-  if (!nextIds.has(nomeTabela)) {
-    const maxId = dados.reduce((m, d) => Math.max(m, d.id || 0), 0);
-    nextIds.set(nomeTabela, maxId);
+  if (!nextIds.has(tableName)) {
+    const maxId = records.reduce((m, d) => Math.max(m, d.id || 0), 0);
+    nextIds.set(tableName, maxId);
   }
 
-  function gerarId() {
-    const id = (nextIds.get(nomeTabela) || 0) + 1;
-    nextIds.set(nomeTabela, id);
+  function generateId() {
+    const id = (nextIds.get(tableName) || 0) + 1;
+    nextIds.set(tableName, id);
     return id;
   }
 
-  function validar(entrada, parcial = false) {
-    const erros = [];
+  function deepCopy(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function validate(input, partial = false) {
+    const errors = [];
     for (const p of props) {
-      const val = entrada[p.name];
-      if (val === undefined && !parcial) {
-        erros.push(`Campo "${p.name}" (${p.type}) é obrigatório`);
+      const val = input[p.name];
+      if (val === undefined && !partial) {
+        errors.push(`Campo "${p.name}" (${p.type}) is required`);
         continue;
       }
       if (val === undefined) continue;
 
-      const tipoEsperado = TIPOS_MAP[p.type] || "any";
-      if (tipoEsperado === "string" && typeof val !== "string") {
-        erros.push(`Campo "${p.name}" espera TEXTO, recebeu ${typeof val}`);
-      } else if (tipoEsperado === "number" && typeof val !== "number") {
-        erros.push(`Campo "${p.name}" espera NUMERO, recebeu ${typeof val}`);
-      } else if (tipoEsperado === "boolean" && typeof val !== "boolean") {
-        erros.push(`Campo "${p.name}" espera BOOLEANO, recebeu ${typeof val}`);
+      const expectedType = TYPE_MAP[p.type] || "any";
+      if (expectedType === "string" && typeof val !== "string") {
+        errors.push(`Campo "${p.name}" expects TEXT, got ${typeof val}`);
+      } else if (expectedType === "number" && typeof val !== "number") {
+        errors.push(`Campo "${p.name}" expects NUMBER, got ${typeof val}`);
+      } else if (expectedType === "boolean" && typeof val !== "boolean") {
+        errors.push(`Campo "${p.name}" expects BOOLEAN, got ${typeof val}`);
       }
     }
-    return erros;
+    for (const k of Object.keys(input)) {
+      if (
+        k !== "id" &&
+        k !== "criadoEm" &&
+        k !== "atualizadoEm" &&
+        !props.some((p) => p.name === k)
+      ) {
+        errors.push(`Campo "${k}" is not declared in the ${tableName} schema`);
+      }
+    }
+    return errors;
   }
 
-  return {
-    async criar(entrada) {
-      const erros = validar(entrada);
-      if (erros.length > 0) throw new Error("Erros de validação:\n" + erros.join("\n"));
-      const item = { id: gerarId(), ...entrada, criadoEm: new Date().toISOString() };
-      dados.push(item);
-      await salvar();
-      return item;
+  const repo = {
+    async "bota-ai"(input) {
+      const errors = validate(input);
+      if (errors.length > 0) throw new Error("Validation errors:\n" + errors.join("\n"));
+      const item = { id: generateId(), ...input, criadoEm: new Date().toISOString() };
+      records.push(item);
+      await save();
+      return deepCopy(item);
     },
 
-    listar() {
-      return [...dados];
+    vê() {
+      return deepCopy(records);
     },
 
-    buscar(id) {
-      return dados.find(d => d.id === id) || null;
+    acha(id) {
+      const found = records.find((d) => d.id === id);
+      return found ? deepCopy(found) : null;
     },
 
-    async atualizar(id, mudancas) {
-      const idx = dados.findIndex(d => d.id === id);
-      if (idx === -1) throw new Error(`Registro ${id} não encontrado em ${nomeTabela}`);
-      const erros = validar(mudancas, true);
-      if (erros.length > 0) throw new Error("Erros de validação:\n" + erros.join("\n"));
-      dados[idx] = { ...dados[idx], ...mudancas, atualizadoEm: new Date().toISOString() };
-      await salvar();
-      return dados[idx];
+    async altera(id, changes) {
+      const idx = records.findIndex((d) => d.id === id);
+      if (idx === -1) throw new Error(`Registro ${id} not found in ${tableName}`);
+      const errors = validate(changes, true);
+      if (errors.length > 0) throw new Error("Validation errors:\n" + errors.join("\n"));
+      const next = { ...records[idx], ...changes, atualizadoEm: new Date().toISOString() };
+      next.id = records[idx].id;
+      next.criadoEm = records[idx].criadoEm;
+      records[idx] = next;
+      await save();
+      return deepCopy(records[idx]);
     },
 
-    async deletar(id) {
-      const idx = dados.findIndex(d => d.id === id);
-      if (idx === -1) throw new Error(`Registro ${id} não encontrado em ${nomeTabela}`);
-      const removido = dados.splice(idx, 1)[0];
-      await salvar();
-      return removido;
+    async alterakkkk(id, changes) {
+      return repo.altera(id, changes);
     },
 
-    buscarOnde(filtro) {
-      return dados.filter(d => {
-        for (const [k, v] of Object.entries(filtro)) {
-          if (d[k] !== v) return false;
-        }
-        return true;
-      });
+    async "apaga-ae"(id) {
+      const idx = records.findIndex((d) => d.id === id);
+      if (idx === -1) throw new Error(`Registro ${id} not found in ${tableName}`);
+      const removed = records.splice(idx, 1)[0];
+      await save();
+      return deepCopy(removed);
     },
 
-    select(campos) {
-      return dados.map(d => {
-        const obj = {};
-        for (const c of campos) obj[c] = d[c];
-        return obj;
-      });
+    achaOnde(filter) {
+      return deepCopy(
+        records.filter((d) => {
+          for (const [k, v] of Object.entries(filter)) {
+            if (d[k] !== v) return false;
+          }
+          return true;
+        })
+      );
     },
 
-    contar() {
-      return dados.length;
+    select(fields) {
+      return deepCopy(
+        records.map((d) => {
+          const obj = {};
+          for (const c of fields) obj[c] = d[c];
+          return obj;
+        })
+      );
+    },
+
+    "quantos?"() {
+      return records.length;
     },
 
     async limpar() {
-      dados = [];
-      await salvar();
+      records = [];
+      nextIds.set(tableName, 0);
+      await save();
     },
   };
+
+  return repo;
 }

@@ -2,14 +2,15 @@ import fs from "fs";
 import path from "path";
 import http from "http";
 import os from "os";
-import { createRequire } from 'module';
+import { createRequire } from "module";
+import { fileURLToPath } from "url";
 
 import { lex } from "./lexer.js";
 import { parse } from "./parser.js";
 import { optimize } from "./optimizer.js";
-import { interpret, TABELAS } from "./interpreter.js";
-import { setSource, XSError } from "./errors.js";
-import { criarRepositorio } from "./orm.js";
+import { interpret } from "./interpreter.js";
+import { setSource, XSError, CATEGORY, buildCode } from "./errors.js";
+import { AssertionError } from "./interpreter.js";
 
 const require = createRequire(import.meta.url);
 const CACHE = new Map();
@@ -31,148 +32,185 @@ export function createEnv(baseDir) {
   const servers = new Set();
 
   const builtins = {
+    "grita-ae": (...a) => console.log(...a),
+    sussurra: (...a) => console.warn(...a),
 
-    SOLTA_O_GRITO: (...a) => console.log(...a),
-    FALA_BAIXO: (...a) => console.warn(...a),
+    horinha: () => Date.now(),
+    date: (a, b) => {
+      if (a != b)
+        throw new AssertionError(`date failed: ${JSON.stringify(a)} != ${JSON.stringify(b)}`);
+    },
+    "traduz-ai": String,
+    embrulha: (v, espaco) => JSON.stringify(v, null, espaco),
+    "data-agora": () => new Date().toISOString(),
+    "data-de-ms": (ms) => new Date(ms).toISOString(),
+    hash: (s) => {
+      const { createHash } = require("crypto");
+      return createHash("sha256").update(String(s)).digest("hex");
+    },
 
-    AGORA: () => Date.now(),
-    String: String,
+    tamanho: (v) => (v == null ? 0 : v.length),
+    "divide-texto": (s, sep) => String(s).split(sep),
+    juntar: (arr, sep) => arr.join(sep),
+    "decodifica-url": (s) => decodeURIComponent(String(s)),
+    encontra: (s, sub) => String(s).match(new RegExp(sub)),
+    url: (s) => encodeURIComponent(String(s)),
 
-    AGORA_VAI: async url => {
+    stalkeia: async (url) => {
       try {
         const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
         return await res.json();
       } catch (e) {
-        throw new XSError(`Falha em AGORA_VAI("${url}"): ${e.message}`, {
-          hint: "Verifique se a URL está correta e acessível",
-          code: "E100",
+        throw new XSError(`Failed in stalkeia("${url}"): ${e.message}`, {
+          hint: "Check that the URL is correct and reachable",
+          help: "Make sure the URL starts with http:// or https://",
+          code: buildCode(CATEGORY.NET, 1),
         });
       }
     },
 
-    ESPERA_AI: ms => new Promise(r => setTimeout(r, ms)),
-    SORTEIA: (a, b) => Math.floor(Math.random() * (b - a + 1)) + a,
-    PARSEIA: JSON.parse,
-    OUVE_AQUI: k => process.env[k] ?? null,
+    "aguenta-ai": (ms) => new Promise((r) => setTimeout(r, ms)),
+    escolhe: (a, b) => Math.floor(Math.random() * (b - a + 1)) + a,
+    desembola: JSON.parse,
+    bisbilhota: (key) => process.env[key] ?? null,
 
-    CRIA_SERVIDOR: (port, handler) => {
+    escuta: (port, handler) => {
       const server = http.createServer(async (req, res) => {
-        const resposta = {
-          enviar: (dados, tipo) => {
-            if (tipo) res.setHeader("Content-Type", tipo);
-            res.end(String(dados));
+        const response = {
+          enviar: (data, type) => {
+            if (type) res.setHeader("Content-Type", type);
+            res.end(String(data));
           },
-          json: (dados) => {
+          json: (data) => {
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify(dados));
+            res.end(JSON.stringify(data));
           },
-          status: (codigo) => {
-            res.statusCode = codigo;
-            return resposta;
+          status: (code) => {
+            res.statusCode = code;
+            return response;
           },
-          cabecalho: (chave, valor) => {
-            res.setHeader(chave, valor);
-            return resposta;
+          cabecalho: (key, value) => {
+            res.setHeader(key, value);
+            return response;
           },
         };
 
-        const requisicao = {
+        const request = {
           url: req.url,
           metodo: req.method,
           cabecalhos: req.headers,
-          corpo: await new Promise(resolve => {
+          corpo: await new Promise((resolve) => {
             let body = "";
-            req.on("data", c => body += c);
+            req.on("data", (c) => (body += c));
             req.on("end", () => resolve(body));
           }),
         };
 
         try {
-          await handler(requisicao, resposta);
+          await handler(request, response);
         } catch (e) {
           res.statusCode = 500;
-          res.end("Erro interno: " + e.message);
+          res.end("Internal error: " + e.message);
         }
       });
 
       server.listen(port, () => {
-        console.log(` Servidor rodando em http://localhost:${port}`);
+        console.log(` Server running on http://localhost:${port}`);
+      });
+
+      server.on("error", (err) => {
+        if (err.code === "EADDRINUSE") {
+          console.error(` Port ${port} is already in use`);
+        } else {
+          console.error(` Server error: ${err.message}`);
+        }
       });
 
       servers.add(server);
       return server;
     },
 
-    PARA_SERVIDOR: (server) => {
+    "terminamos!": (server) => {
       server.close();
       servers.delete(server);
-      console.log(" Servidor parado");
+      console.log(" Server stopped");
     },
 
-    CRIA_REPOSITORIO: (nomeTabela) => {
-      const t = TABELAS[nomeTabela];
-      const props = t?.props || [];
-      return criarRepositorio(nomeTabela, props);
-    },
-
-    __IMPORT__: async mod => {
+    __IMPORT__: async (mod) => {
       let full;
-      
+
       if (mod.startsWith(".") || mod.startsWith("/")) {
         full = path.resolve(baseDir, mod);
       } else {
-        const xsPkgDir = path.join(baseDir, "node_modules", mod);
-        const xsPkgFile = path.join(xsPkgDir, "xspack.json");
-        
-        if (fs.existsSync(xsPkgFile)) {
-          const pkgMeta = JSON.parse(fs.readFileSync(xsPkgFile, "utf-8"));
-          full = path.resolve(xsPkgDir, pkgMeta.main || "src/index.xs");
-          if (!fs.existsSync(full)) full = path.resolve(xsPkgDir, "src/index.xs");
+        const stdPath = path.resolve(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "..",
+          "std",
+          `${mod}.xs`
+        );
+        if (fs.existsSync(stdPath)) {
+          full = stdPath;
         } else {
-          try {
-            let localPath = path.join(baseDir, "node_modules", mod);
-            if (fs.existsSync(localPath)) {
-              return await importNodeModule(localPath);
-            }
-            
-            let currentDir = baseDir;
-            while (currentDir !== path.parse(currentDir).root) {
-              const nodeModulesPath = path.join(currentDir, "node_modules", mod);
-              if (fs.existsSync(nodeModulesPath)) {
-                return await importNodeModule(nodeModulesPath);
+          const xsPkgDir = path.join(baseDir, "node_modules", mod);
+          const xsPkgFile = path.join(xsPkgDir, "bglh.json");
+
+          if (fs.existsSync(xsPkgFile)) {
+            const pkgMeta = JSON.parse(fs.readFileSync(xsPkgFile, "utf-8"));
+            full = path.resolve(xsPkgDir, pkgMeta.main || "src/index.xs");
+            if (!fs.existsSync(full)) full = path.resolve(xsPkgDir, "src/index.xs");
+          } else {
+            try {
+              let localPath = path.join(baseDir, "node_modules", mod);
+              if (fs.existsSync(localPath)) {
+                return await importNodeModule(localPath);
               }
-              currentDir = path.dirname(currentDir);
+
+              let currentDir = baseDir;
+              while (currentDir !== path.parse(currentDir).root) {
+                const nodeModulesPath = path.join(currentDir, "node_modules", mod);
+                if (fs.existsSync(nodeModulesPath)) {
+                  return await importNodeModule(nodeModulesPath);
+                }
+                currentDir = path.dirname(currentDir);
+              }
+
+              return await importNodeModule(mod);
+            } catch (e) {
+              throw new XSError(`Failed to import module "${mod}": ${e.message}`, {
+                hint: "Check that the package is installed (npm install) or that the path is correct",
+                help: `Run \`npm install ${mod}\` or check the module path`,
+                code: buildCode(CATEGORY.IMPT, 2),
+              });
             }
-            
-            return await importNodeModule(mod);
-          } catch (e) {
-            throw new XSError(`Falha ao importar módulo "${mod}": ${e.message}`, {
-              hint: "Verifique se o pacote está instalado (npm install) ou se o caminho está correto",
-              code: "E102",
-            });
           }
         }
       }
-      
+
       if (CACHE.has(full)) {
         return CACHE.get(full);
       }
       if (LOADING.has(full)) {
-        throw new XSError(`Import cíclico detectado: ${mod}`, {
-          hint: "Dois arquivos se importam mutuamente",
-          code: "E101",
+        throw new XSError(`Circular import detected: ${mod}`, {
+          hint: "Two files import each other mutually",
+          help: "Break the cycle by extracting shared code into a third module",
+          code: buildCode(CATEGORY.IMPT, 1),
         });
       }
       LOADING.add(full);
-      const code = fs.readFileSync(full, "utf-8");
-      const exports = {};
-      const env2 = createEnv(path.dirname(full));
-      env2.EXPORTA = (name, value) => { exports[name] = value; };
-      await runModule(code, env2);
-      CACHE.set(full, exports);
-      LOADING.delete(full);
-      return exports;
-    }
+      try {
+        const code = fs.readFileSync(full, "utf-8");
+        const exports = {};
+        const env2 = createEnv(path.dirname(full));
+        env2["manda-ai"] = (name, value) => {
+          exports[name] = value;
+        };
+        await runModule(code, env2);
+        CACHE.set(full, exports);
+        return exports;
+      } finally {
+        LOADING.delete(full);
+      }
+    },
   };
   builtins.__dir = baseDir;
   return builtins;
@@ -181,20 +219,20 @@ export function createEnv(baseDir) {
 async function importNodeModule(name) {
   try {
     let modulePath = name;
-    
-    if (!name.includes('/') && !name.includes('\\')) {
+
+    if (!name.includes("/") && !name.includes("\\")) {
       try {
         modulePath = require.resolve(name);
       } catch (resolveError) {
-        const localPath = path.join(process.cwd(), 'node_modules', name);
+        const localPath = path.join(process.cwd(), "node_modules", name);
         if (fs.existsSync(localPath)) {
           if (fs.statSync(localPath).isDirectory()) {
-            const pkgPath = path.join(localPath, 'package.json');
+            const pkgPath = path.join(localPath, "package.json");
             if (fs.existsSync(pkgPath)) {
-              const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-              modulePath = path.join(localPath, pkg.main || 'index.js');
+              const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+              modulePath = path.join(localPath, pkg.main || "index.js");
             } else {
-              modulePath = path.join(localPath, 'index.js');
+              modulePath = path.join(localPath, "index.js");
             }
           } else {
             modulePath = localPath;
@@ -204,16 +242,16 @@ async function importNodeModule(name) {
     } else {
       modulePath = path.resolve(name);
       if (fs.existsSync(modulePath) && fs.statSync(modulePath).isDirectory()) {
-        const pkgPath = path.join(modulePath, 'package.json');
+        const pkgPath = path.join(modulePath, "package.json");
         if (fs.existsSync(pkgPath)) {
-          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-          modulePath = path.join(modulePath, pkg.main || 'index.js');
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+          modulePath = path.join(modulePath, pkg.main || "index.js");
         } else {
-          modulePath = path.join(modulePath, 'index.js');
+          modulePath = path.join(modulePath, "index.js");
         }
       }
     }
-    
+
     try {
       const mod = require(modulePath);
       return mod.default || mod;
@@ -222,9 +260,10 @@ async function importNodeModule(name) {
       return mod.default || mod;
     }
   } catch (e) {
-    throw new XSError(`Falha ao importar módulo "${name}": ${e.message}`, {
-      hint: "Verifique se o pacote está instalado (npm install) e se o caminho está correto",
-      code: "E102",
+    throw new XSError(`Failed to import module "${name}": ${e.message}`, {
+      hint: "Check that the package is installed (npm install) and that the path is correct",
+      help: `Run \`npm install ${name}\` or check the module path`,
+      code: buildCode(CATEGORY.IMPT, 2),
     });
   }
 }
@@ -237,7 +276,7 @@ async function runModule(code, env) {
 
   for (const stmt of ast.body) {
     if (stmt.type === "ExportStmt") {
-      env.EXPORTA(stmt.name, env[stmt.name]);
+      env["manda-ai"](stmt.name, env[stmt.name]);
       continue;
     }
     await interpret(stmt, env);

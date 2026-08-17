@@ -11,17 +11,17 @@ export async function generateDocs(srcDir = ".", outDir = "docs") {
     fs.mkdirSync(output, { recursive: true });
   }
 
-  console.log(` Gerando documentação de ${root} → ${output}`);
+  console.log(` Generating documentation for ${root} → ${output}`);
 
   const files = [];
   collectXSFile(root, files);
 
   if (files.length === 0) {
-    console.log("  Nenhum arquivo .xs encontrado");
+    console.log("  No .xs files found");
     return;
   }
 
-  console.log(`  ${files.length} arquivo(s) encontrado(s)`);
+  console.log(`  ${files.length} file(s) found`);
 
   const allDocs = [];
 
@@ -36,8 +36,8 @@ export async function generateDocs(srcDir = ".", outDir = "docs") {
   const outFile = path.join(output, "index.html");
   fs.writeFileSync(outFile, html, "utf-8");
 
-  console.log(`   Documentação gerada: ${outFile}`);
-  console.log(`  Abra no navegador para ver`);
+  console.log(`   Documentation generated: ${outFile}`);
+  console.log(`  Open in your browser to view`);
 }
 
 function collectXSFile(dir, files) {
@@ -46,7 +46,11 @@ function collectXSFile(dir, files) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory() && entry.name !== "node_modules" && !entry.name.startsWith(".")) {
       collectXSFile(fullPath, files);
-    } else if (entry.isFile() && entry.name.endsWith(".xs") && !entry.name.includes("node_modules")) {
+    } else if (
+      entry.isFile() &&
+      entry.name.endsWith(".xs") &&
+      !entry.name.includes("node_modules")
+    ) {
       files.push(fullPath);
     }
   }
@@ -74,8 +78,8 @@ function extractDocs(filePath, code) {
     const docStr = currentComment.length > 0 ? currentComment.join("\n") : null;
     currentComment = [];
 
-    if (trimmed.startsWith("CHAMA ESSE CARA ")) {
-      const match = trimmed.match(/CHAMA ESSE CARA (\w+)/);
+    if (trimmed.startsWith("resolve ")) {
+      const match = trimmed.match(/resolve (\w+)/);
       if (match) {
         functions.push({
           name: match[1],
@@ -86,8 +90,8 @@ function extractDocs(filePath, code) {
       }
     }
 
-    if (trimmed.startsWith("CLASSE ")) {
-      const match = trimmed.match(/CLASSE (\w+)/);
+    if (trimmed.startsWith("classe ")) {
+      const match = trimmed.match(/classe (\w+)/);
       if (match) {
         classes.push({
           name: match[1],
@@ -98,8 +102,8 @@ function extractDocs(filePath, code) {
       }
     }
 
-    if (trimmed.startsWith("TAREFA ")) {
-      const match = trimmed.match(/TAREFA (\w+)/);
+    if (trimmed.startsWith("tarefa ")) {
+      const match = trimmed.match(/tarefa "?([\w-]+)"?/);
       if (match) {
         tasks.push({
           name: match[1],
@@ -110,8 +114,8 @@ function extractDocs(filePath, code) {
       }
     }
 
-    if (trimmed.startsWith("TESTE ")) {
-      const match = trimmed.match(/TESTE "([^"]+)"/);
+    if (trimmed.startsWith("crush ")) {
+      const match = trimmed.match(/crush "([^"]+)"/);
       if (match) {
         tests.push({
           name: match[1],
@@ -122,7 +126,7 @@ function extractDocs(filePath, code) {
       }
     }
 
-    if (docStr && !trimmed.match(/CHAMA ESSE CARA|CLASSE|TAREFA|TESTE/)) {
+    if (docStr && !trimmed.match(/resolve|classe|tarefa|crush/)) {
       comments.push({ doc: docStr, line: i + 1 });
     }
   }
@@ -155,7 +159,7 @@ function generateHTML(allDocs) {
         <div class="item-header">
           <span class="tag fn">function</span>
           <code>${f.name}</code>
-          <span class="line">linha ${f.line}</span>
+          <span class="line">line ${f.line}</span>
         </div>
         ${f.doc ? `<p class="doc">${escapeHtml(f.doc)}</p>` : ""}
         <pre><code>${escapeHtml(f.code)}</code></pre>
@@ -168,7 +172,7 @@ function generateHTML(allDocs) {
         <div class="item-header">
           <span class="tag cls">class</span>
           <code>${c.name}</code>
-          <span class="line">linha ${c.line}</span>
+          <span class="line">line ${c.line}</span>
         </div>
         ${c.doc ? `<p class="doc">${escapeHtml(c.doc)}</p>` : ""}
         <pre><code>${escapeHtml(c.code)}</code></pre>
@@ -181,7 +185,7 @@ function generateHTML(allDocs) {
         <div class="item-header">
           <span class="tag test">test</span>
           <code>${escapeHtml(t.name)}</code>
-          <span class="line">linha ${t.line}</span>
+          <span class="line">line ${t.line}</span>
         </div>
       </div>\n`;
     }
@@ -192,7 +196,7 @@ function generateHTML(allDocs) {
         <div class="item-header">
           <span class="tag task">task</span>
           <code>${t.name}</code>
-          <span class="line">linha ${t.line}</span>
+          <span class="line">line ${t.line}</span>
         </div>
         ${t.doc ? `<p class="doc">${escapeHtml(t.doc)}</p>` : ""}
       </div>\n`;
@@ -200,15 +204,15 @@ function generateHTML(allDocs) {
 
     items += `<div class="file" id="${fileId}">
       <h2> ${doc.file}</h2>
-      ${funcs ? `<h3>Funções</h3>${funcs}` : ""}
+      ${funcs ? `<h3>Functions</h3>${funcs}` : ""}
       ${classes ? `<h3>Classes</h3>${classes}` : ""}
-      ${tests ? `<h3>Testes</h3>${tests}` : ""}
-      ${tasks ? `<h3>Tarefas</h3>${tasks}` : ""}
+      ${tests ? `<h3>Tests</h3>${tests}` : ""}
+      ${tasks ? `<h3>Tasks</h3>${tasks}` : ""}
     </div>\n`;
   }
 
   return `<!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

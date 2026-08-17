@@ -1,6 +1,6 @@
 {
   "name": "xanascript",
-  "version": "2.2.8",
+  "version": "3.0.0",
   "description": "Programming language with Portuguese syntax, optimizing compiler, built-in ORM, and WebAssembly support",
   "type": "module",
   "workspaces": [
@@ -9,14 +9,18 @@
     "xs-examples"
   ],
   "bin": {
+    "xana": "bin/xana.js",
     "xs": "bin/xs.js"
   },
   "scripts": {
     "build": "node scripts/build-all.js",
-    "test": "node test/lexer.test.js && node test/parser.test.js && node test/interpreter.test.js",
-    "test:xs": "node bin/xs.js test test/completo_test.xs",
-    "test:all": "node test/run.js && node bin/xs.js test test/completo_test.xs",
-    "lint": "node bin/xs.js fmt --check src/",
+    "test": "node test/lexer.test.js && node test/parser.test.js && node test/optimizer.test.js && node test/interpreter.test.js && node test/stdlib.test.js && node test/vm.test.js && node test/typecheck.test.js && node test/errors.test.js && node test/parity.test.js && node test/cli.test.js && node test/lsp.test.js && node test/sourcemap.test.js && node test/pkgmgr.test.js && node test/dap.test.js && node test/wasm.test.js && node test/memory.test.js && node test/bench.test.js",
+    "test:xs": "node bin/xs.js test test",
+    "test:all": "node test/run.js && node bin/xs.js test test",
+    "lint": "node bin/xs.js fmt --check src/ && prettier --check \"src/**/*.js\" \"test/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.js\"",
+    "format": "prettier --write \"src/**/*.js\" \"test/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.js\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"test/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.js\"",
+    "bench": "node src/bench.js",
     "clean": "rm -rf dist node_modules xs-site/node_modules xs-vscode/node_modules"
   },
   "repository": {
@@ -49,5 +53,8 @@
     "std",
     "llms.txt",
     "VERSION"
-  ]
+  ],
+  "devDependencies": {
+    "prettier": "^3.9.6"
+  }
 }

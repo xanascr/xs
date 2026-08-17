@@ -2,21 +2,23 @@
 
 ## Overview
 
-XanaScript is a programming language with Portuguese syntax, an optimizing compiler (JavaScript + WebAssembly), built-in ORM, compile-time macros, LSP, and zero runtime dependencies.
+XanaScript is a strongly typed programming language with Portuguese keywords, an optimizing compiler (JavaScript + WebAssembly), a built-in ORM, compile-time macros, an LSP server, and zero runtime dependencies.
 
 - Repository: https://github.com/xanascr/xs
-- License: MIT
-- Language: Portuguese keywords, JavaScript/WebAssembly compilation target
+- License: Apache-2.0
+- Language: Portuguese keywords, JavaScript/WebAssembly/bytecode compilation targets
+- Requirements: Node.js 18+
 
 ## Project Structure
 
 ```
 xs/
-  src/           Compiler source (20 modules)
+  src/           Compiler source
   test/          Unit tests
   std/           Standard library
   scripts/       Build scripts
-  docs/          Documentation (en, pt-br, es)
+  docs/          English documentation
+  bin/           CLI entry points
   package.json   npm package
   VERSION        Version file
 ```
@@ -26,20 +28,21 @@ Key source files:
 | File | Purpose |
 |------|---------|
 | src/lexer.js | Tokenization with line/col tracking |
-| src/parser.js | AST generation via recursive descent |
-| src/ast.js | AST node constructors |
-| src/optimizer.js | Constant folding, dead branch elimination, macro expansion |
+| src/parser.js | Recursive-descent AST parser |
+| src/typecheck.js | Static type checking and inference |
+| src/optimizer.js | Constant folding, dead code elimination, macro expansion |
 | src/interpreter.js | AST-walking interpreter |
 | src/runtime.js | Built-in functions and execution environment |
 | src/codegen.js | Standard JavaScript code generation |
-| src/codegen_opt.js | Optimized JS with TypedArrays |
+| src/codegen_opt.js | Optimized JS (TypedArrays, int32, type inference) |
 | src/codegen_wasm.js | WebAssembly text format generation |
 | src/wasm_binary.js | Direct WebAssembly binary emission |
-| src/errors.js | Rust-style error formatting |
+| src/errors.js | Categorized error reporting (SINT/TIPO/NOME/IMPT/NET/RUNT) |
 | src/cli.js | CLI entry point |
 | src/orm.js | Built-in ORM |
 | src/macros.js | Compile-time macro expansion |
 | src/lsp.js | Language Server Protocol |
+| src/dap.js | Debug Adapter Protocol (breakpoints, step, variables) |
 | src/testrunner.js | Unit test runner |
 | src/docsgen.js | HTML documentation generator |
 | src/pkgmgr.js | Package manager |
@@ -49,212 +52,244 @@ Key source files:
 | src/bytecode/opcodes.js | Opcode definitions |
 | src/bench.js | Benchmark runner |
 
-## Language Syntax
+## Language Syntax (v3)
 
 ### Program Structure
 
-All XanaScript programs are wrapped in PARTIU() / ACABOU():
+A program is a sequence of statements:
 
 ```xs
-PARTIU()
-  // code here
-ACABOU()
+cria x = 10
+grita-ae(x)
 ```
 
 ### Keywords
 
 ```
-PARTIU, ACABOU, CRIA, SE, LIGA, SO, SENAO, REPETE, NA, MORAL, AI,
-CHAMA, ESSE, CARA, VOLTA, IMPORTA, EXPORTA, SOLTA, O, GRITO,
-FALA, BAIXO, AGORA, VAI, ESPERA, AI, SORTEIA, PARSEIA, OUVE, AQUI,
-VERDADEIRO, FALSO, NULO, TENTA, PEGA, ERRO, ASSINCRONO, VOA,
-CONTINUA, CLASSE, HERDA, CONSTRUTOR, ISTO, NOVA, METODO, ESCOLHE,
-CASO, PADRAO, COMBINA, SERVIDOR, PARA, TAMANHO, DIVIDE, TEXTO,
-ENCONTRA, DECODIFICA, URL, JUNTAR, TESTE, AFIRMA, ASSUNTO, TAREFA,
-TABELA, MACRO, TIPO, CRUD
+cria, lei, fofoca, se-pah, ai, repete-na-moral, repete-enquanto,
+resolve, volta, traz-ai, manda-ai, grita-ae, sussurra, horinha,
+stalkeia, aguenta-ai, escolhe, desembola, bisbilhota, verdadeiro,
+falso, nulo, tenta, fodeu, no-fim, assincrono, mete-o-pe,
+segue-o-baile, classe, herda, spawna, esse-cara, novo, metodo,
+vai-de, se-for, se-nao-der, ve-se, bateu-com, qualquer-coisa,
+escuta, terminamos!, tamanho, divide-texto, encontra, decodifica-url,
+juntar, crush, deu-match, date, tarefa, DB, tpm, tipo, crud,
+tipo-de, instancia-de, vdd?, traduz-ai
 ```
 
 ### Data Types
 
-| Type | Examples |
-|------|----------|
-| Number | `10`, `3.14`, `-5` |
-| String | `"texto"`, `'texto'` |
-| Boolean | `VERDADEIRO`, `FALSO` |
-| Null | `NULO` |
-| Array | `[1, 2, 3]` |
-| Object | `{ nome: "Joao", idade: 30 }` |
-| Template | `` `Hello ${name}` `` |
+| Type | Examples | Runtime check |
+|------|----------|---------------|
+| `eh-numero` | `10`, `3.14`, `-5` | `typeof === "number"` |
+| `eh-palavra` | `"texto"`, `'texto'` | `typeof === "string"` |
+| `vdd?` | `verdadeiro`, `falso` | `typeof === "boolean"` |
+| `eh-nada` | `nulo` | `null` |
+| `sla` | any value | always |
+| `sus<T>` | `[1, 2, 3]` | array |
+| `bagulho` | `{...}` | object |
+| `crush` | class instance | object/instance |
+| `sepah<T>` | optional `T` | `T` or `null` |
+| `promessa<T>` | async result | Promise |
+| `faz-ai` | callable | function |
 
 ### Operators
 
-**Arithmetic:** `+` `-` `*` `/` `%`
+**Arithmetic:** `+` `-` `*` `/` `%` `**`
 **Bitwise:** `|` `&` `^` `~` `<<` `>>`
-**Comparison:** `==` `!=` `>` `<` `>=` `<=` `~=`
+**Comparison:** `==` `!=` `===` `!==` `>` `<` `>=` `<=` `~=`
 **Logical:** `&&` `||` `!`
-**Compound:** `+=` `-=` `*=` `/=` `%=` `|=` `&=` `^=` `<<=` `>>=`
-**Ternary:** `test ? cons : alt`
+**Null coalescing:** `??`
+**Optional chaining:** `?.`
+**Spread:** `...` (arrays and objects)
+**Compound:** `+=` `-=` `*=` `/=` `%=` `**=` `&&=` `||=` `??=` `|=` `&=` `^=` `<<=` `>>=`
+**Ternary:** `cond ? then : else`
 
 ### Variables
 
 ```xs
-CRIA x = 10
-CRIA nome = "Maria"
-CRIA ativo = VERDADEIRO
-CRIA valor = NULO
+cria x = 10                 // mutable
+lei PI = 3.14159            // const
+fofoca g = 1                // global
 ```
 
 ### Control Flow
 
 **If/Else:**
 ```xs
-SE LIGA SO (cond) { } SENAO { }
-SENAO SE LIGA SO (cond) { }
+se-pah (cond) { } ai { }
+ai se-pah (cond) { }
 ```
 
 **While:**
 ```xs
-REPETE AI (cond) { }
+repete-enquanto (cond) { }
 ```
 
 **For:**
 ```xs
-REPETE NA MORAL (init; test; update) { }
+repete-na-moral (cria i = 0; i < 5; i += 1) { }
 ```
 
 **Break/Continue:**
 ```xs
-VOA()     // break
-CONTINUA() // continue
+mete-o-pe       // break
+segue-o-baile   // continue
 ```
 
 **Switch:**
 ```xs
-ESCOLHE (expr) {
-  CASO valor: code
-  PADRAO: code
+vai-de (expr) {
+  se-for valor: code
+  se-nao-der: code
 }
 ```
 
 **Pattern Matching:**
 ```xs
-COMBINA (expr) {
-  CASO pattern: code
-  CASO _: code
+ve-se (expr) {
+  bateu-com pattern: code
+  qualquer-coisa: code
 }
 ```
 
 ### Functions
 
 ```xs
-CHAMA ESSE CARA nome(params) { }
-VOLTA expr
+resolve nome(params) { volta expr }
 ```
 
 Arrow functions:
 ```xs
 (params) => expr
 (params) => { }
-ASSINCRONO (params) => { }
+assincrono (params) => { }
 ```
 
 ### Classes / OOP
 
 ```xs
-CLASSE Nome {
-  CONSTRUTOR(params) { }
-  METODO nome(params) { }
+classe Nome {
+  spawna(params) { }
+  metodo nome(params) { }
 }
-CLASSE Filha HERDA Pai { }
-ISTO    // this
-NOVA Classe() // new
+classe Filha herda Pai { }
+esse-cara   // this
+novo Classe()  // new
 ```
 
 ### Error Handling
 
 ```xs
-TENTA { } PEGA(erro) { }
+tenta { } fodeu(erro) { } no-fim { }
 ```
 
 ### Modules
 
 ```xs
-IMPORTA "path"
-IMPORTA "path" as alias
-IMPORTA nome
-EXPORTA nome
+traz-ai "path"
+traz-ai "path" as alias
+traz-ai nome
+manda-ai nome
 ```
 
 ### Macros (Compile-time)
 
 ```xs
-MACRO nome(params) { body }
+tpm nome(params) { body }
 ```
 
 ### ORM
 
 ```xs
-TABELA Nome { campo: TIPO }
-CRIA repo = TABELA("Nome")
-repo.criar(obj)
-repo.listar()
-repo.buscar(id)
-repo.atualizar(id, obj)
-repo.deletar(id)
-repo.buscarOnde(filter)
-repo.contar()
+DB Nome { campo: TIPO }
+Nome.bota-ai(obj)
+Nome.vê()
+Nome.acha(id)
+Nome.altera(id, mudancas)
+Nome.alterakkkk(id, mudancas)  // alias para altera
+Nome.apaga-ae(id)
+Nome.achaOnde(filter)
+Nome.select(campos)
+Nome.quantos?()
+Nome.limpar()
 ```
+
+`DB` binds the repository to a variable named after the table.
+
+Column types: `TEXTO`/`NUMERO`/`BOOLEANO`/`DATA`/`QUALQUER` or `eh-palavra`/`eh-numero`/`eh-booleano`/`eh-data`/`eh-qualquer`.
 
 ### Testing
 
 ```xs
-TESTE("name") { AFIRMA(cond) }
-ASSUNTO(actual, expected)
+crush "name" { date(actual, expected) }
+deu-match(cond)
 ```
+
+`crush` also accepts parentheses: `crush("name") { ... }`. `mete-o-pe`/`segue-o-baile` are statements (parens optional).
 
 ### Tasks
 
 ```xs
-TAREFA("name") { }
+tarefa "name" { }
 ```
 
 ## Built-in Functions
 
 | Function | Description | Signature |
 |----------|-------------|-----------|
-| SOLTA_O_GRITO | Prints to stdout | SOLTA_O_GRITO(...args) |
-| FALA_BAIXO | Prints to stderr | FALA_BAIXO(...args) |
-| AGORA_VAI | HTTP GET request | AGORA_VAI(url) |
-| ESPERA_AI | Sleep/delay | ESPERA_AI(ms) |
-| SORTEIA | Random integer | SORTEIA(min, max) |
-| PARSEIA | JSON parse | PARSEIA(json) |
-| OUVE_AQUI | Environment variable | OUVE_AQUI(chave) |
-| TAMANHO | Length of array/string | TAMANHO(valor) |
-| DIVIDE_TEXTO | String split | DIVIDE_TEXTO(texto, separador) |
-| DECODIFICA_URL | URL decode | DECODIFICA_URL(url) |
-| CRIA_SERVIDOR | HTTP server | CRIA_SERVIDOR(porta, handler) |
-| PARA_SERVIDOR | Stop server | PARA_SERVIDOR(server) |
+| `grita-ae` | Print to stdout | `grita-ae(...args)` |
+| `sussurra` | Print warning to stderr | `sussurra(...args)` |
+| `horinha` | Current timestamp (ms) | `horinha()` |
+| `traduz-ai` | Convert to string | `traduz-ai(x)` |
+| `stalkeia` | Fetch JSON from URL (3s timeout) | `stalkeia(url)` |
+| `aguenta-ai` | Sleep/delay | `aguenta-ai(ms)` |
+| `escolhe` | Random integer `[min, max]` | `escolhe(min, max)` |
+| `desembola` | JSON parse | `desembola(json)` |
+| `bisbilhota` | Environment variable | `bisbilhota(chave)` |
+| `tamanho` | Length of array/string | `tamanho(valor)` |
+| `divide-texto` | String split | `divide-texto(texto, separador)` |
+| `juntar` | Join array into string | `juntar(arr, sep)` |
+| `decodifica-url` | URL decode | `decodifica-url(url)` |
+| `encontra` | Regex match (match array or null) | `encontra(s, sub)` |
+| `embrulha` | JSON serialize | `embrulha(valor, espaco?)` |
+| `data-agora` | Current time as ISO string | `data-agora()` |
+| `data-de-ms` | ms → ISO string | `data-de-ms(ms)` |
+| `hash` | SHA-256 hex digest | `hash(texto)` |
+| `url` | URL-encode a string | `url(s)` |
+| `escuta` | HTTP server | `escuta(porta, handler)` |
+| `terminamos!` | Stop server | `terminamos!(server)` |
 
 ## CLI Commands
 
+English names are primary; Portuguese aliases are listed after each command.
+
 ```
-xs run <file>         Execute .xs file (AST Interpreter)
-xs vm <file>          Execute .xs file (Bytecode VM)
-xs check <file>       Check syntax only
-xs build <file>       Generate JavaScript
-xs build --opt <file> Generate optimized JavaScript
-xs build --wasm <file>Generate WebAssembly (.wat + .wasm)
-xs build --standalone <file> Generate single .js with runtime
-xs test <dir>         Run test files
-xs dev <file>         Watch mode with hot reload
-xs fmt <file>         Format .xs file
-xs repl               Interactive REPL
-xs lsp                Language Server Protocol (stdin/stdout)
-xs docs <src> <out>   Generate HTML documentation
-xs init <name>        Create new project scaffold
-xs install <pkg>      Install a package
-xs publish            Publish current package
-xs bench              Run benchmarks
+xana run <file>          Run .xs (AST interpreter)              [roda]
+xana vm <file>           Run .xs (bytecode VM)                  [roda --vm]
+xana check <file>        Type-check without executing           [verifica]
+xana fmt <file>          Format .xs                             [ajeita]
+xana build <file>        Generate JavaScript                    [monta]
+xana build --opt <file>  Generate optimized JavaScript          [--otimizado]
+xana build --wasm <file> Generate WebAssembly (.wat + .wasm)
+xana run-wasm <file>     Run .xs via the WebAssembly binary backend
+xana build --standalone <file>  Generate single .js with runtime [--sozinho]
+xana test [dir]          Run test files                         [teste]
+xana test --watch [dir]  Watch mode for tests                   [teste --olha]
+xana dev [file]          Watch mode with hot reload             [vigia]
+xana repl                Interactive REPL                       [bate-papo]
+xana lsp                 Language Server Protocol (stdin/stdout) [fala-com-ide]
+xana debuga              Debug Adapter Protocol (stdin/stdout)
+xana docs <src> <out>    Generate HTML documentation            [documenta]
+xana init <name>         Create a new project                   [rascunho]
+xana install <pkg>       Install a package                      [bota-ai]
+xana publish             Publish current package                [solta-ai]
+xana search <term>       Search packages                        [stalkeia]
+xana login               Log in to the registry
+xana whoami              Show logged-in user
+xana logout              Log out
+xana bench               Run benchmarks                         [mede]
+xana help                Show help
 ```
 
 ## Compilation Pipeline
@@ -269,9 +304,10 @@ xs bench              Run benchmarks
 ```
 
 1. **Lexer** (lexer.js): Converts source text to tokens with position tracking
-2. **Parser** (parser.js): Recursive descent parser, generates AST
-3. **Optimizer** (optimizer.js): Constant folding, dead branch elimination, macro expansion
-4. **Code Generation**: Multiple backends
+2. **Parser** (parser.js): Recursive-descent parser, generates AST
+3. **Typecheck** (typecheck.js): Static type checking and inference
+4. **Optimizer** (optimizer.js): Constant folding, dead branch elimination, macro expansion
+5. **Code Generation**: multiple backends
    - codegen.js: Standard JavaScript
    - codegen_opt.js: Optimized JS with int32 TypedArrays
    - codegen_wasm.js: WebAssembly text (.wat) format
@@ -280,7 +316,7 @@ xs bench              Run benchmarks
 
 ## Error System
 
-Rust-style errors with source code preview, arrow pointing to exact location, and hints:
+Categorized errors with source code preview, arrow pointing to the exact location, hints, and did-you-mean suggestions:
 
 ```
   XSError: message
@@ -288,27 +324,46 @@ Rust-style errors with source code preview, arrow pointing to exact location, an
   1 | code
     | ^
   hint: suggestion
+  help: documentation link
 ```
 
-Error codes: E001-E005, E999, I001
+Categories: `SINT` (syntax), `TIPO` (types), `NOME` (names), `IMPT` (imports), `NET` (network), `ORML` (ORM), `TST` (tests), `RUNT` (runtime), `INFO` (informational). Error codes follow the pattern `CATEGORIA-NN`.
 
-## Bytecode VM (26 opcodes)
+## WebAssembly Backend (wasm_binary.js)
 
-Opcodes include: PUSH, POP, ADD, SUB, MUL, DIV, MOD, EQ, NEQ, GT, LT, GTE, LTE, AND, OR, NOT, NEG, JMP, JIF, LOAD, STORE, CALL, RET, PRN, NEWA, NEWO, LDAT, STAT, DUP, SWAP, HALT
+Direct binary Wasm emission (no wat text round-trip). `runWasm(ast)` compiles, instantiates, wires the runtime imports (`grita-ae`, `sussurra`, `horinha`, `escolhe`, `tamanho`, `desembola`), exports `main` and `memory`, and calls `setWasmMemory` so strings are readable in JS.
+
+Capabilities (parity-validated against the interpreter in `test/wasm.test.js`):
+- i32/f64 arithmetic, division as f64 (JS semantics), unary minus and `!`
+- `&&`/`||` via `local.tee` + `local.get` + `i32.eqz` + `if (result i32)` (no `drop` of pre-if stack values — V8 rejects that)
+- If/else, while, for, break/continue with dynamic label depth (`labelDepth`/`loopStack`)
+- Recursion, nested functions, function returns
+- Strings as UTF-8 data segments from `STRING_BASE` (0x4000) with `tamanho` reading them
+- Bool printing as "true"/"false" via string pointer
+
+`test/memory.test.js` covers string-pool integrity, long strings, `readMemString` on the exported memory, and stable module size across repeated runs. `src/bench.js` benchmarks interpreter × VM × JS × Wasm with speedups and result consistency; `xana bench` runs it.
+
+## Bytecode VM (60 opcodes)
+
+Opcodes include: PUSH, POP, ADD, SUB, MUL, DIV, MOD, POW, EQ, NEQ, GT, LT, GTE, LTE, AND, OR, NOT, NEG, JMP, JIF, LOAD, STORE, CALL, RET, PRN, NEWA, NEWO, LDAT, STAT, DUP, SWAP, HALT, NULLCO, OPTMEMBER, TYPEOF, INSTANCEOF, ARR_INIT, ARR_APPEND, ARR_SPREAD, ARR_END, OBJ_INIT, OBJ_SET, OBJ_SPREAD, OBJ_END, RETURN, CALLMEMBER, STORE_MEMBER, STORE_INDEX, NEW, CLASS, LEN, SCOPE_ENTER, SCOPE_EXIT, CONST, GLOBAL.
 
 ## ORM (Object-Relational Mapping)
 
-SQLite-backed repository with JSON file storage. Field types: TEXTO, NUMERO, BOOLEANO, DATA. Data stored in `.xs-data/` directory.
+JSON-file-backed repository with validation. Field types: TEXTO, NUMERO, BOOLEANO, DATA, QUALQUER. Data stored in `.db/` directory with automatic `.bak` backups.
 
 ## LSP (Language Server Protocol)
 
-Provides autocomplete, hover information, go-to-definition, diagnostics, and signature help via stdin/stdout.
+Provides autocomplete (keywords, builtins, member completion after `.` with type inference), hover with inferred types, go-to-definition, diagnostics, and rename refactoring via stdin/stdout.
+
+## DAP (Debug Adapter Protocol)
+
+`xana debuga` runs a DAP server over stdin/stdout. Supports launch, line breakpoints, continue/next/stepIn, pause, stackTrace, scopes/variables, and evaluate. The interpreter exposes `setDebugHook(fn)` so statement-level breakpoints are driven by the AST walker (breakpoints match source lines).
 
 ## Package Manager
 
 Registry: https://api.xanascript.dev/packages
 Fallback: npm with `xanascript-` prefix
-Commands: xs init, xs install, xs publish
+Commands: xana init, xana install, xana publish
 
 ## Source Maps
 
@@ -316,8 +371,8 @@ VLQ-encoded source mappings between generated JS and original .xs lines. Comment
 
 ## Build Process
 
-Requires bun for native compilation:
 ```bash
 node scripts/build-all.js
 ```
-Outputs standalone binary `dist/xs(.exe)` with zero dependencies. Bundles all 147 modules into single executable.
+
+Bundles all modules into a single executable with zero dependencies.

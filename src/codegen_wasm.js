@@ -23,7 +23,7 @@ export function generateWasm(ast) {
   ctx.wasm.push(`  (global $__sp (mut i32) (i32.const 0))`);
 
   if (ctx.stringPool.length > 0) {
-    ctx.wasm.push(`  (data (i32.const 0) "${ctx.stringPool.join('')}")`);
+    ctx.wasm.push(`  (data (i32.const 0) "${ctx.stringPool.join("")}")`);
   }
 
   emitFunctions(ast, ctx);
@@ -40,7 +40,10 @@ export function generateWasm(ast) {
 
 function collectDeclarations(node, ctx) {
   if (!node || typeof node !== "object") return;
-  if (Array.isArray(node)) { node.forEach(n => collectDeclarations(n, ctx)); return; }
+  if (Array.isArray(node)) {
+    node.forEach((n) => collectDeclarations(n, ctx));
+    return;
+  }
 
   if (node.type === "VarDecl") {
     if (!ctx.vars.has(node.id)) {
@@ -54,13 +57,13 @@ function collectDeclarations(node, ctx) {
 
   if (node.type === "Call" && node.callee?.type === "Ident") {
     const name = node.callee.name;
-    if (["SOLTA_O_GRITO", "FALA_BAIXO", "SORTEIA", "PARSEIA"].includes(name)) {
+    if (["grita-ae", "sussurra", "escolhe", "desembola"].includes(name)) {
       if (!ctx.imports.has(name)) {
         const jsMap = {
-          SOLTA_O_GRITO: { jsName: "log", params: "(param i32)", result: "(result i32)" },
-          FALA_BAIXO: { jsName: "warn", params: "(param i32)", result: "(result i32)" },
-          SORTEIA: { jsName: "randInt", params: "(param i32)(param i32)", result: "(result i32)" },
-          PARSEIA: { jsName: "parseJSON", params: "(param i32)", result: "(result i32)" },
+          "grita-ae": { jsName: "log", params: "(param i32)", result: "(result i32)" },
+          sussurra: { jsName: "warn", params: "(param i32)", result: "(result i32)" },
+          escolhe: { jsName: "randInt", params: "(param i32)(param i32)", result: "(result i32)" },
+          desembola: { jsName: "parseJSON", params: "(param i32)", result: "(result i32)" },
         };
         ctx.imports.set(name, jsMap[name]);
       }
@@ -75,7 +78,10 @@ function collectDeclarations(node, ctx) {
 
 function emitFunctions(node, ctx) {
   if (!node || typeof node !== "object") return;
-  if (Array.isArray(node)) { node.forEach(n => emitFunctions(n, ctx)); return; }
+  if (Array.isArray(node)) {
+    node.forEach((n) => emitFunctions(n, ctx));
+    return;
+  }
 
   if (node.type === "FunctionDecl") {
     const params = node.params.map(() => "i32").join(" ");
@@ -83,7 +89,6 @@ function emitFunctions(node, ctx) {
   }
 
   if (node.type === "Program") {
-
     if (!ctx._mainEmitted) {
       emitWasmFunction("main", [], "i32", node, ctx);
       ctx._mainEmitted = true;
@@ -96,12 +101,13 @@ function emitFunctions(node, ctx) {
   }
 
   if (node.type === "Block" || node.type === "Program") {
-
   }
 }
 
 function emitWasmFunction(name, params, result, body, ctx) {
-  ctx.wasm.push(`  (func $${name} (export "${name}")${params.length ? " (param " + params.map(() => "i32").join(" ") + ")" : ""} (result ${result})`);
+  ctx.wasm.push(
+    `  (func $${name} (export "${name}")${params.length ? " (param " + params.map(() => "i32").join(" ") + ")" : ""} (result ${result})`
+  );
   ctx.wasm.push(`    (local $__ret i32)`);
 
   for (const [vname, v] of ctx.vars) {
@@ -121,13 +127,12 @@ function emitWasmCode(node, ctx) {
   if (!node || typeof node !== "object") return;
 
   switch (node.type) {
-
     case "Program":
-      node.body.forEach(n => emitWasmCode(n, ctx));
+      node.body.forEach((n) => emitWasmCode(n, ctx));
       break;
 
     case "Block":
-      node.body.forEach(n => emitWasmCode(n, ctx));
+      node.body.forEach((n) => emitWasmCode(n, ctx));
       break;
 
     case "VarDecl": {
@@ -152,9 +157,9 @@ function emitWasmCode(node, ctx) {
     case "Ident": {
       if (ctx.vars.has(node.name)) {
         ctx.wasm.push(`    local.get $${node.name}`);
-      } else if (node.name === "VERDADEIRO") {
+      } else if (node.name === "verdadeiro") {
         ctx.wasm.push(`    i32.const 1`);
-      } else if (node.name === "FALSO") {
+      } else if (node.name === "falso") {
         ctx.wasm.push(`    i32.const 0`);
       } else {
         ctx.wasm.push(`    unreachable`);
@@ -327,17 +332,66 @@ function emitWasmCode(node, ctx) {
   }
 }
 
+const STRING_BASE = 0x4000;
+let WASM_MEMORY = null;
+let MEMORY_SIZE = 0;
+
+export function setWasmMemory(mem) {
+  WASM_MEMORY = mem;
+  MEMORY_SIZE = mem ? mem.buffer.byteLength : 0;
+}
+
+function isStringPtr(n) {
+  return typeof n === "number" && n >= STRING_BASE && n < MEMORY_SIZE;
+}
+
+export function readMemString(ptr) {
+  if (!WASM_MEMORY) return "";
+  const view = new Uint8Array(WASM_MEMORY.buffer);
+  let end = ptr;
+  while (end < MEMORY_SIZE && end < view.length && view[end] !== 0) end++;
+  return new TextDecoder().decode(view.subarray(ptr, end));
+}
+
 export function getWasmRuntime() {
+  const log = (n) => {
+    console.log(isStringPtr(n) ? readMemString(n) : n);
+    return n;
+  };
+  const warn = (n) => {
+    console.warn(isStringPtr(n) ? readMemString(n) : n);
+    return n;
+  };
+  const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+  const parseJSON = (s) => {
+    try {
+      const str = isStringPtr(s) ? readMemString(s) : s;
+      return Number(JSON.parse(str));
+    } catch {
+      return 0;
+    }
+  };
+  const horinha = () => Date.now();
+  const pow = (a, b) => Math.pow(a, b);
+  const tamanho = (n) =>
+    isStringPtr(n) ? readMemString(n).length : typeof n === "number" ? n : (n?.length ?? 0);
   return {
-    log: (n) => { console.log(n); return n; },
-    warn: (n) => { console.warn(n); return n; },
-    randInt: (a, b) => Math.floor(Math.random() * (b - a + 1)) + a,
-    parseJSON: (s) => { try { return Number(JSON.parse(s)); } catch { return 0; } },
+    log,
+    warn,
+    randInt,
+    parseJSON,
+    horinha,
+    pow,
+    tamanho,
+    "grita-ae": log,
+    sussurra: warn,
+    escolhe: randInt,
+    desembola: parseJSON,
   };
 }
 
 export function getDefaultExports() {
   return {
-    env: getWasmRuntime()
+    env: getWasmRuntime(),
   };
 }

@@ -5,8 +5,12 @@ dist
 _xs_entry.mjs
 *.json-data
 *.db
+.db/
 *.vsix
 *.exe
+*.wasm
+*.wat
+*.bak
 Usuario.json
 xs-ideias/
 xs-pacotes/

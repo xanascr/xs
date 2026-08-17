@@ -10,11 +10,8 @@ const XS_CACHE_DIR = path.join(
   ".xs",
   "packages"
 );
-const XS_CONFIG_DIR = path.join(
-  process.env.HOME || process.env.USERPROFILE || ".",
-  ".xs"
-);
-const XS_PACKAGE_FILE = "xspack.json";
+const XS_CONFIG_DIR = path.join(process.env.HOME || process.env.USERPROFILE || ".", ".xs");
+const XS_PACKAGE_FILE = "bglh.json";
 const XS_TOKEN_FILE = path.join(XS_CONFIG_DIR, "token.json");
 
 function getToken() {
@@ -28,8 +25,7 @@ function getToken() {
 }
 
 function saveToken(token, user) {
-  if (!fs.existsSync(XS_CONFIG_DIR))
-    fs.mkdirSync(XS_CONFIG_DIR, { recursive: true });
+  if (!fs.existsSync(XS_CONFIG_DIR)) fs.mkdirSync(XS_CONFIG_DIR, { recursive: true });
   fs.writeFileSync(
     XS_TOKEN_FILE,
     JSON.stringify({ token, user, savedAt: new Date().toISOString() }, null, 2)
@@ -52,7 +48,12 @@ async function registryFetch(url, options = {}) {
 
 async function prompt(question) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => rl.question(question, (a) => { rl.close(); resolve(a); }));
+  return new Promise((resolve) =>
+    rl.question(question, (a) => {
+      rl.close();
+      resolve(a);
+    })
+  );
 }
 
 // ── xs login ────────────────────────────────────────────────────────────
@@ -116,7 +117,7 @@ export async function initProject(dir) {
 
   const pkgFile = path.join(target, XS_PACKAGE_FILE);
   if (fs.existsSync(pkgFile)) {
-    console.log(" xspack.json already exists");
+    console.log(" bglh.json already exists");
     return;
   }
 
@@ -137,15 +138,12 @@ export async function initProject(dir) {
 
   const indexFile = path.join(srcDir, "index.xs");
   if (!fs.existsSync(indexFile)) {
-    fs.writeFileSync(
-      indexFile,
-      `PARTIU()\nSOLTA O GRITO("Hello from ${pkg.name}!")\nACABOU()\n`
-    );
+    fs.writeFileSync(indexFile, `grita-ae("Hello from ${pkg.name}!")\n`);
   }
 
   const gitignore = path.join(target, ".gitignore");
   if (!fs.existsSync(gitignore)) {
-    fs.writeFileSync(gitignore, "node_modules/\n.xs-cache/\n");
+    fs.writeFileSync(gitignore, "node_modules/\n.db/\n.xs-cache/\n");
   }
 
   console.log(` XanaScript project created at ${target}`);
@@ -158,7 +156,7 @@ export async function initProject(dir) {
 export async function publishPackage() {
   const pkgFile = findPackageFile();
   if (!pkgFile) {
-    console.error(" xspack.json not found. Create one with: xs init");
+    console.error(" bglh.json not found. Create one with: xs init");
     return;
   }
 
@@ -186,7 +184,7 @@ export async function publishPackage() {
   // Create a simple tar.gz
   const tarBuffer = await createTarball(path.dirname(pkgFile), files);
 
-  // Read xspack.json as string for metadata
+  // Read bglh.json as string for metadata
   const pkgJson = JSON.parse(fs.readFileSync(pkgFile, "utf-8"));
 
   const formData = new FormData();
@@ -197,7 +195,11 @@ export async function publishPackage() {
   formData.append("repository", pkg.repository || "");
   formData.append("keywords", JSON.stringify(pkgJson.keywords || []));
   formData.append("readme", readme);
-  formData.append("file", new Blob([tarBuffer], { type: "application/gzip" }), `${pkg.name}-${pkg.version}.tar.gz`);
+  formData.append(
+    "file",
+    new Blob([tarBuffer], { type: "application/gzip" }),
+    `${pkg.name}-${pkg.version}.tar.gz`
+  );
 
   try {
     const res = await registryFetch(`${XS_REGISTRY}/api/packages`, {
@@ -221,13 +223,12 @@ export async function publishPackage() {
 // ── xs install ──────────────────────────────────────────────────────────
 
 export async function installPackages(packages) {
-  if (!fs.existsSync(XS_CACHE_DIR))
-    fs.mkdirSync(XS_CACHE_DIR, { recursive: true });
+  if (!fs.existsSync(XS_CACHE_DIR)) fs.mkdirSync(XS_CACHE_DIR, { recursive: true });
 
   if (packages.length === 0) {
     const pkgFile = findPackageFile();
     if (!pkgFile) {
-      console.log(" No xspack.json found. Run: xs init");
+      console.log(" No bglh.json found. Run: xs init");
       return;
     }
     const pkg = JSON.parse(fs.readFileSync(pkgFile, "utf-8"));
@@ -240,9 +241,7 @@ export async function installPackages(packages) {
 
   const visited = new Set();
   for (const pkgName of packages) {
-    const [name, version] = pkgName.includes("@")
-      ? pkgName.split("@")
-      : [pkgName, "latest"];
+    const [name, version] = pkgName.includes("@") ? pkgName.split("@") : [pkgName, "latest"];
 
     console.log(` Installing ${name}...`);
 
@@ -265,7 +264,11 @@ export async function installPackages(packages) {
 }
 
 function sanitizePkgName(name) {
-  const safe = name.replace(/[^a-z0-9_@./-]/gi, "").replace(/\.\.\//g, "").replace(/\.\.\\/g, "").replace(/^~/g, "");
+  const safe = name
+    .replace(/[^a-z0-9_@./-]/gi, "")
+    .replace(/\.\.\//g, "")
+    .replace(/\.\.\\/g, "")
+    .replace(/^~/g, "");
   if (!safe || safe !== name) throw new Error(`Invalid package name: ${name}`);
   return safe;
 }
@@ -318,13 +321,26 @@ async function installFromRegistry(name, version, visited = new Set()) {
         fs.writeFileSync(path.join(distDir, ".xs-meta.json"), JSON.stringify(meta, null, 2));
 
         // Download the package tarball
-        const dlRes = await fetch(
-          `${XS_REGISTRY}/api/packages/${name}/download`,
-          { method: "POST" }
-        );
+        const dlRes = await fetch(`${XS_REGISTRY}/api/packages/${name}/download`, {
+          method: "POST",
+        });
         if (dlRes.ok && dlRes.headers.get("Content-Type")?.includes("gzip")) {
           const buffer = Buffer.from(await dlRes.arrayBuffer());
           await extractTarball(buffer, distDir);
+          fs.writeFileSync(
+            path.join(distDir, XS_PACKAGE_FILE),
+            JSON.stringify(
+              {
+                name: info.package.name,
+                version: info.package.version,
+                description: info.package.description,
+                license: info.package.license,
+                main: "src/index.xs",
+              },
+              null,
+              2
+            )
+          );
           return true;
         }
         // Save metadata even without file
@@ -368,14 +384,11 @@ async function installFromGitHub(name, version, distDir) {
     );
     if (!repo) return installFromNpm(name, version);
 
-    const pkgUrl = `https://raw.githubusercontent.com/${repo.full_name}/main/xspack.json`;
+    const pkgUrl = `https://raw.githubusercontent.com/${repo.full_name}/main/bglh.json`;
     const pkgRes = await fetch(pkgUrl);
     if (pkgRes.ok) {
       const pkgData = await pkgRes.json();
-      fs.writeFileSync(
-        path.join(distDir, XS_PACKAGE_FILE),
-        JSON.stringify(pkgData, null, 2)
-      );
+      fs.writeFileSync(path.join(distDir, XS_PACKAGE_FILE), JSON.stringify(pkgData, null, 2));
     }
 
     const srcUrl = `https://raw.githubusercontent.com/${repo.full_name}/main/src/index.xs`;
@@ -460,9 +473,7 @@ export async function searchPackages(query) {
   console.log(` Searching for "${query}"...`);
 
   try {
-    const res = await fetch(
-      `${XS_REGISTRY}/api/packages?q=${encodeURIComponent(query)}`
-    );
+    const res = await fetch(`${XS_REGISTRY}/api/packages?q=${encodeURIComponent(query)}`);
     const data = await res.json();
     if (data.ok && data.packages?.length > 0) {
       console.log(`\n ${data.packages.length} package(s) found:\n`);
@@ -568,7 +579,7 @@ async function createTarball(baseDir, files) {
 async function extractTarball(buffer, destDir) {
   const tgzPath = path.join(destDir, "package.tar.gz");
   fs.writeFileSync(tgzPath, buffer);
-  console.log(`   Extraindo para ${destDir}`);
+  console.log(`   Extracting to ${destDir}`);
 
   try {
     execFileSync("tar", ["-xzf", tgzPath, "-C", destDir], { stdio: "ignore" });
@@ -579,10 +590,8 @@ async function extractTarball(buffer, destDir) {
 
 export function getInstalledPackages() {
   if (!fs.existsSync(XS_CACHE_DIR)) return [];
-  return fs
-    .readdirSync(XS_CACHE_DIR)
-    .filter((d) => {
-      const pkgFile = path.join(XS_CACHE_DIR, d, XS_PACKAGE_FILE);
-      return fs.existsSync(pkgFile);
-    });
+  return fs.readdirSync(XS_CACHE_DIR).filter((d) => {
+    const pkgFile = path.join(XS_CACHE_DIR, d, XS_PACKAGE_FILE);
+    return fs.existsSync(pkgFile);
+  });
 }

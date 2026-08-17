@@ -23,23 +23,26 @@ export class SourceMap {
     const stack = error.stack;
     const lines = stack.split("\n");
 
-    const translated = lines.map(line => {
-
+    const translated = lines.map((line) => {
       const match = line.match(/:(\d+):\d+/);
       if (!match) return line;
       const jsLine = parseInt(match[1]);
 
       let bestXsLine = null;
-      for (const m of this.mappings) {
-        if (m.jsLine <= jsLine) {
-          bestXsLine = m.xsLine;
-        } else break;
+      const lastJsLine = this.mappings[this.mappings.length - 1]?.jsLine || Infinity;
+      if (jsLine <= lastJsLine) {
+        for (const m of this.mappings) {
+          if (m.jsLine <= jsLine) {
+            bestXsLine = m.xsLine;
+          } else break;
+        }
       }
 
       if (bestXsLine !== null) {
         const xsContent = this.xsLines[bestXsLine - 1]?.trim() || "";
-        return line.replace(/:(\d+):(\d+)/, `:${bestXsLine}:1`) +
-          `  ← xs:${bestXsLine} ${xsContent}`;
+        return (
+          line.replace(/:(\d+):(\d+)/, `:${bestXsLine}:1`) + `  ← xs:${bestXsLine} ${xsContent}`
+        );
       }
       return line;
     });
@@ -65,13 +68,28 @@ export class SourceMap {
 
   static fromComment(comment, xsLines) {
     const match = comment.match(/sourceMap=(\{.+?\})/);
-    if (!match) return null;
-    try {
-      const data = JSON.parse(match[1]);
-      const sm = new SourceMap(data.file, xsLines?.join("\n"));
-      sm.mappings = data.mappings;
-      return sm;
-    } catch { return null; }
+    if (match) {
+      try {
+        const data = JSON.parse(match[1]);
+        const sm = new SourceMap(data.file, xsLines?.join("\n"));
+        sm.mappings = data.mappings;
+        return sm;
+      } catch {
+        return null;
+      }
+    }
+    const b64 = comment.match(/sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)/);
+    if (b64) {
+      try {
+        const data = JSON.parse(Buffer.from(b64[1], "base64").toString("utf-8"));
+        const sm = new SourceMap(data.file, xsLines?.join("\n"));
+        sm.mappings = data.mappings;
+        return sm;
+      } catch {
+        return null;
+      }
+    }
+    return null;
   }
 
   static getRuntimeWrapper() {
@@ -90,7 +108,10 @@ const __xs_handler = {
           if (!m) return l;
           const jsLine = parseInt(m[1]);
           let best = null;
-          sourceMap.mappings.some(m => { if (m.jsLine <= jsLine) { best = m.xsLine; return false; } return true; });
+          const lastJsLine = sourceMap.mappings[sourceMap.mappings.length - 1]?.jsLine || Infinity;
+          if (jsLine <= lastJsLine) {
+            sourceMap.mappings.some(m => { if (m.jsLine <= jsLine) { best = m.xsLine; return false; } return true; });
+          }
           if (best) l = l.replace(/:(\\\\d+):\\\\d+/, ":" + best + ":1") + "  ← xs:" + best;
           return l;
         }).join("\\\\n");

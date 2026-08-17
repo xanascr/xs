@@ -4,12 +4,14 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PKG_VERSION = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf-8")).version;
+const PKG_VERSION = JSON.parse(
+  readFileSync(join(__dirname, "..", "package.json"), "utf-8")
+).version;
 const ROOT = join(__dirname, "..");
 
 async function main() {
   console.log("╔══════════════════════════════════════╗");
-  console.log(`║  XanaScript v${PKG_VERSION.padEnd(5)} Native Build   ║`);
+  console.log(`║    XanaScript v${PKG_VERSION.padEnd(5)} Native Build    ║`);
   console.log("╚══════════════════════════════════════╝");
 
   const distDir = join(ROOT, "dist");
@@ -19,7 +21,7 @@ async function main() {
   const hasPkg = await commandExists("pkg");
 
   if (!hasBun && !hasPkg) {
-    console.log("✗ Precisa de bun ou pkg:");
+    console.log("  Requires bun or pkg:");
     console.log("  npm install -g bun");
     console.log("  npm install -g pkg");
     process.exit(1);
@@ -30,7 +32,7 @@ async function main() {
   writeFileSync(entryFile, entryContent, "utf-8");
 
   if (hasBun) {
-    console.log("\nBun detectado. Gerando binário nativo...\n");
+    console.log("\nBun detected. Generating native binary...\n");
 
     const plat = process.platform;
     const arch = process.arch;
@@ -45,22 +47,26 @@ async function main() {
       console.log(`  OK ${outName} (${plat} ${arch})`);
       console.log(`  ${outPath}`);
 
-      console.log(`\n  Testando...`);
+      console.log(`\n  Testing...`);
       try {
-        const helpOut = execSync(`"${outPath}" help`, { cwd: ROOT, encoding: "utf-8", timeout: 5000 });
+        const helpOut = execSync(`"${outPath}" help`, {
+          cwd: ROOT,
+          encoding: "utf-8",
+          timeout: 5000,
+        });
         if (helpOut.includes("XanaScript")) {
-          console.log(`  OK Binario funcional!`);
+          console.log(`  OK binary works!`);
         }
       } catch (e) {
-        console.log(`  Teste: ${e.message}`);
+        console.log(`  Test: ${e.message}`);
       }
     } catch (e) {
-      console.error(`  ERRO bun build: ${e.message}`);
+      console.error(`  ERROR bun build: ${e.message}`);
     }
   }
 
   if (hasPkg) {
-    console.log("\nPkg detectado. Gerando binarios multiplataforma...\n");
+    console.log("\nPkg detected. Generating cross-platform binaries...\n");
 
     const targets = [
       { target: "node18-win-x64", ext: ".exe", platform: "Windows x64" },
@@ -79,20 +85,28 @@ async function main() {
         );
         console.log(`  OK ${outName}`);
       } catch (e) {
-        console.error(`  ERRO ${t.platform}: ${e.message}`);
+        console.error(`  ERROR ${t.platform}: ${e.message}`);
       }
     }
   }
 
-  try { execSync(`rm -f "${entryFile}"`, { stdio: "ignore" }); } catch {}
-  try { execSync(`del "${entryFile}"`, { stdio: "ignore" }); } catch {}
-  try { execSync(`del "${entryFile.replace("/", "\\")}"`, { stdio: "ignore" }); } catch {}
-  try { unlinkSync(entryFile); } catch {}
+  try {
+    execSync(`rm -f "${entryFile}"`, { stdio: "ignore" });
+  } catch {}
+  try {
+    execSync(`del "${entryFile}"`, { stdio: "ignore" });
+  } catch {}
+  try {
+    execSync(`del "${entryFile.replace("/", "\\")}"`, { stdio: "ignore" });
+  } catch {}
+  try {
+    unlinkSync(entryFile);
+  } catch {}
 
-  console.log("\nBuild concluido!");
-  console.log(`  Binarios em: ${distDir}`);
+  console.log("\nBuild complete!");
+  console.log(`  Binaries in: ${distDir}`);
   console.log("");
-  console.log("  Uso:");
+  console.log("  Usage:");
   console.log(`  ${join(distDir, "xs")} help`);
   console.log(`  ${join(distDir, "xs")} run app.xs`);
   console.log(`  ${join(distDir, "xs")} build --wasm app.xs`);

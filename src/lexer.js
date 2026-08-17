@@ -1,65 +1,63 @@
 const KEYWORDS = new Set([
-  "PARTIU", "ACABOU",
-  "CRIA",
-  "SE", "LIGA", "SO", "SENAO",
-  "REPETE", "NA", "MORAL",
-  "CHAMA", "ESSE", "CARA",
-  "VOLTA",
-  "IMPORTA",
-  "EXPORTA",
-  "SOLTA", "O", "GRITO",
-  "FALA", "BAIXO",
-  "AGORA", "VAI",
-  "ESPERA", "AI",
-  "SORTEIA",
-  "PARSEIA",
-  "OUVE", "AQUI",
-  "VERDADEIRO",
-  "FALSO",
-  "NULO",
-  "TENTA",
-  "PEGA",
-  "ERRO",
-  "ASSINCRONO",
-  "VOA",
-  "CONTINUA",
-
-  "CLASSE",
-  "HERDA",
-  "CONSTRUTOR",
-  "ISTO",
-  "NOVA",
-  "METODO",
-
-  "ESCOLHE",
-  "CASO",
-  "PADRAO",
-
-  "COMBINA",
-
-  "SERVIDOR",
-  "PARA",
-
-  "TAMANHO",
-  "DIVIDE",
-  "TEXTO",
-  "ENCONTRA",
-  "DECODIFICA",
-  "URL",
-  "JUNTAR",
-
-  "TESTE",
-  "AFIRMA",
-  "ASSUNTO",
-
-  "TAREFA",
-
-  "TABELA",
-
-  "MACRO",
-
-  "TIPO",
-  "CRUD",
+  "cria",
+  "lei",
+  "fofoca",
+  "se-pah",
+  "ai",
+  "repete-na-moral",
+  "repete-enquanto",
+  "resolve",
+  "volta",
+  "traz-ai",
+  "manda-ai",
+  "grita-ae",
+  "sussurra",
+  "horinha",
+  "stalkeia",
+  "aguenta-ai",
+  "escolhe",
+  "desembola",
+  "bisbilhota",
+  "verdadeiro",
+  "falso",
+  "nulo",
+  "tenta",
+  "fodeu",
+  "no-fim",
+  "mete-o-pe",
+  "segue-o-baile",
+  "assincrono",
+  "classe",
+  "herda",
+  "spawna",
+  "esse-cara",
+  "novo",
+  "metodo",
+  "vai-de",
+  "se-for",
+  "se-nao-der",
+  "ve-se",
+  "bateu-com",
+  "qualquer-coisa",
+  "escuta",
+  "terminamos!",
+  "tamanho",
+  "divide-texto",
+  "encontra",
+  "decodifica-url",
+  "juntar",
+  "crush",
+  "deu-match",
+  "date",
+  "tarefa",
+  "DB",
+  "tpm",
+  "tipo",
+  "crud",
+  "tipo-de",
+  "instancia-de",
+  "vdd?",
+  "traduz-ai",
 ]);
 
 export function lex(input, file = "input.xs") {
@@ -77,54 +75,71 @@ export function lex(input, file = "input.xs") {
     tokens.push(tok);
   }
 
-  const isAlpha = c => /[a-zA-Z_]/.test(c);
-  const isNum = c => /[0-9]/.test(c);
-  const isAlnum = c => c && /^[a-zA-Z0-9_]$/.test(c);
+  const isAlpha = (c) => /[a-zA-Z_À-ÖØ-öø-ÿ]/.test(c);
+  const isNum = (c) => /[0-9]/.test(c);
+  const isAlnum = (c) => c && /^[a-zA-Z0-9_À-ÖØ-öø-ÿ]$/.test(c);
 
   while (i < input.length) {
     const c = input[i];
 
-    if (c === "\n") { i++; line++; col = 1; continue; }
-    if (/\s/.test(c)) { i++; col++; continue; }
+    if (c === "\n") {
+      i++;
+      line++;
+      col = 1;
+      continue;
+    }
+    if (/\s/.test(c)) {
+      i++;
+      col++;
+      continue;
+    }
 
     if (c === '"' || c === "'") {
       const q = c;
       const startLoc = loc();
-      i++; col++;
+      i++;
+      col++;
       let val = "";
       while (i < input.length && input[i] !== q) {
-        if (input[i] === "\n") { line++; col = 1; }
-        else col++;
+        if (input[i] === "\n") {
+          line++;
+          col = 1;
+        } else col++;
         val += input[i++];
       }
       if (i >= input.length) {
-        const err = new Error(`String sem fechamento: faltando ${q}`);
+        const err = new Error(`Unterminated string: missing ${q}`);
         err.loc = startLoc;
         throw err;
       }
-      i++; col++;
+      i++;
+      col++;
       push({ type: "STRING", value: val });
       continue;
     }
 
     if (c === "`") {
       const startLoc = loc();
-      i++; col++;
+      i++;
+      col++;
       let val = "";
       const parts = [];
       while (i < input.length && input[i] !== "`") {
         if (input[i] === "$" && input[i + 1] === "{") {
           parts.push({ type: "TEMPLATE_STR", value: val });
           val = "";
-          i += 2; col += 2;
+          i += 2;
+          col += 2;
           let expr = "";
           let depth = 1;
           while (i < input.length && depth > 0) {
             if (input[i] === "{") depth++;
             if (input[i] === "}") depth--;
             if (depth > 0) {
-              if (input[i] === "\n") { line++; col = 1; }
-              else col++;
+              if (input[i] === "\n") {
+                line++;
+                col = 1;
+              } else col++;
               expr += input[i++];
             }
           }
@@ -133,11 +148,14 @@ export function lex(input, file = "input.xs") {
             err.loc = startLoc;
             throw err;
           }
-          i++; col++;
+          i++;
+          col++;
           parts.push({ type: "TEMPLATE_EXPR", value: expr });
         } else {
-          if (input[i] === "\n") { line++; col = 1; }
-          else col++;
+          if (input[i] === "\n") {
+            line++;
+            col = 1;
+          } else col++;
           val += input[i++];
         }
       }
@@ -147,7 +165,8 @@ export function lex(input, file = "input.xs") {
         throw err;
       }
       parts.push({ type: "TEMPLATE_STR", value: val });
-      i++; col++;
+      i++;
+      col++;
       push({ type: "TEMPLATE", parts });
       continue;
     }
@@ -158,14 +177,18 @@ export function lex(input, file = "input.xs") {
     }
 
     if (c === "/" && input[i + 1] === "*") {
-      i += 2; col += 2;
+      i += 2;
+      col += 2;
       while (i < input.length) {
         if (input[i] === "*" && input[i + 1] === "/") {
-          i += 2; col += 2;
+          i += 2;
+          col += 2;
           break;
         }
-        if (input[i] === "\n") { line++; col = 1; }
-        else col++;
+        if (input[i] === "\n") {
+          line++;
+          col = 1;
+        } else col++;
         i++;
       }
       continue;
@@ -173,9 +196,19 @@ export function lex(input, file = "input.xs") {
 
     if (isNum(c)) {
       let num = c;
-      i++; col++;
+      i++;
+      col++;
       while (isNum(input[i])) {
-        num += input[i++]; col++;
+        num += input[i++];
+        col++;
+      }
+      if (input[i] === "." && isNum(input[i + 1])) {
+        num += input[i++];
+        col++;
+        while (isNum(input[i])) {
+          num += input[i++];
+          col++;
+        }
       }
       push({ type: "NUMBER", value: Number(num) });
       continue;
@@ -183,9 +216,22 @@ export function lex(input, file = "input.xs") {
 
     if (isAlpha(c)) {
       let id = c;
-      i++; col++;
-      while (isAlnum(input[i])) {
-        id += input[i++]; col++;
+      i++;
+      col++;
+      while (isAlnum(input[i]) || (input[i] === "-" && isAlpha(input[i + 1]))) {
+        id += input[i++];
+        col++;
+      }
+
+      if (KEYWORDS.has(id + "!") && input[i] === "!") {
+        id += input[i++];
+        col++;
+      } else if (id === "quantos" && input[i] === "?" && input[i + 1] === "(") {
+        id += input[i++];
+        col++;
+      } else if (id === "vdd" && input[i] === "?" && input[i + 1] !== "=") {
+        id += input[i++];
+        col++;
       }
 
       if (KEYWORDS.has(id)) {
@@ -197,34 +243,59 @@ export function lex(input, file = "input.xs") {
     }
 
     const three = input.slice(i, i + 3);
-    if ([
-      "<<=", ">>=",
-    ].includes(three)) {
+    if (["<<=", ">>=", "===", "!==", "??=", "**=", "&&=", "||=", "..."].includes(three)) {
       push({ type: three, value: three });
-      i += 3; col += 3;
+      i += 3;
+      col += 3;
       continue;
     }
 
     const two = input.slice(i, i + 2);
 
-    if ([
-      "=>", "&&", "||", "==", "!=", ">=", "<=",
-      "+=", "-=", "*=", "/=", "%=", "->", "~=",
-      "++", "--", "<<", ">>", "|=", "&=", "^=",
-      "//", "/*",
-    ].includes(two)) {
+    if (
+      [
+        "=>",
+        "&&",
+        "||",
+        "==",
+        "!=",
+        ">=",
+        "<=",
+        "+=",
+        "-=",
+        "*=",
+        "/=",
+        "%=",
+        "->",
+        "~=",
+        "++",
+        "--",
+        "<<",
+        ">>",
+        "|=",
+        "&=",
+        "^=",
+        "//",
+        "/*",
+        "??",
+        "?.",
+        "**",
+      ].includes(two)
+    ) {
       push({ type: two, value: two });
-      i += 2; col += 2;
+      i += 2;
+      col += 2;
       continue;
     }
 
     if ("(){}[];,=:+.-*/<>!%?|&^~".includes(c)) {
       push({ type: c, value: c });
-      i++; col++;
+      i++;
+      col++;
       continue;
     }
 
-    const err = new Error(`Caractere inválido: "${c}" (código: ${c.charCodeAt(0)})`);
+    const err = new Error(`Invalid character: "${c}" (code: ${c.charCodeAt(0)})`);
     err.loc = loc();
     throw err;
   }

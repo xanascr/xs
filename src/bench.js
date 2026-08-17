@@ -1,68 +1,119 @@
 import { lex } from "./lexer.js";
 import { parse } from "./parser.js";
 import { optimize } from "./optimizer.js";
-import { runXS } from "./runtime.js";
+import { interpret, ReturnSignal } from "./interpreter.js";
+import { createEnv } from "./runtime.js";
+import { compile } from "./bytecode/compiler.js";
+import { run } from "./bytecode/vm.js";
+import { runWasm } from "./wasm_binary.js";
+import { getWasmRuntime } from "./codegen_wasm.js";
 
-export async function runBench() {
-  console.log("\n XanaScript Benchmark\n");
-
-  const xsCode = `
-CHAMA ESSE CARA fib(n) {
-  SE LIGA SO (n <= 1) {
-    VOLTA n
-  }
-  VOLTA fib(n - 1) + fib(n - 2)
+const xsCode = `
+resolve fib(n) {
+  se-pah (n <= 1) { volta n }
+  volta fib(n - 1) + fib(n - 2)
 }
-fib(20)
+cria soma = 0
+repete-na-moral (cria i = 0; i < 2000; i++) {
+  soma = soma + i
+}
+fib(20) + soma
 `;
 
-  const jsCode = `
+const jsCode = `
 function fib(n) {
   if (n <= 1) return n;
   return fib(n - 1) + fib(n - 2);
 }
-fib(20)
+let soma = 0;
+for (let i = 0; i < 2000; i++) { soma = soma + i; }
+fib(20) + soma
 `;
 
-  const ITERATIONS = 3;
+function unwrap(rs) {
+  return rs instanceof ReturnSignal ? rs.value : rs;
+}
+
+function buildAst() {
+  return optimize(parse(lex(xsCode)));
+}
+
+function runInterpreter(ast) {
+  return interpret(ast, Object.assign({}, createEnv(process.cwd()))).then(unwrap);
+}
+
+function runVM(ast) {
+  const bc = compile(ast);
+  return run(bc, process.cwd());
+}
+
+function runJS() {
+  return eval(jsCode);
+}
+
+async function warmupWasm(ast) {
+  return runWasm(ast, { env: getWasmRuntime() });
+}
+
+export async function runBench(opts = {}) {
+  const iterations = opts.iterations || 3;
+  console.log("\n === XanaScript Benchmark (multi-backend) ===\n");
+
+  const ast = buildAst();
+  const wasmRunner = await warmupWasm(ast);
 
   for (let i = 0; i < 2; i++) {
-    await runXS(xsCode);
-    eval(jsCode);
+    await runInterpreter(ast);
+    runVM(ast);
+    runJS();
+    wasmRunner.main();
   }
 
-  let xsTotal = 0;
-  for (let i = 0; i < ITERATIONS; i++) {
-    const start = performance.now();
-    await runXS(xsCode);
-    xsTotal += performance.now() - start;
+  const results = {};
+  const measure = async (name, fn) => {
+    let total = 0;
+    let firstValue;
+    for (let i = 0; i < iterations; i++) {
+      const start = performance.now();
+      const v = await fn();
+      total += performance.now() - start;
+      if (i === 0) firstValue = v;
+    }
+    const avg = total / iterations;
+    results[name] = firstValue;
+    return { name, avg, firstValue };
+  };
+
+  const [interp, vm, js, wasm] = await Promise.all([
+    measure("interpreter", () => runInterpreter(ast)),
+    measure("VM", () => runVM(ast)),
+    measure("JavaScript (eval)", () => runJS()),
+    measure("WebAssembly", () => wasmRunner.main()),
+  ]);
+
+  const rows = [interp, vm, js, wasm];
+  for (const r of rows) {
+    console.log(`  ${r.name.padEnd(20)} ${r.avg.toFixed(2).padStart(9)} ms/run`);
   }
+  console.log("\n  speedups vs interpreter:");
+  console.log(`  VM:               ${(interp.avg / vm.avg).toFixed(2)}x`);
+  console.log(`  JavaScript:       ${(interp.avg / js.avg).toFixed(2)}x`);
+  console.log(`  WebAssembly:      ${(interp.avg / wasm.avg).toFixed(2)}x`);
 
-  let jsTotal = 0;
-  for (let i = 0; i < ITERATIONS; i++) {
-    const start = performance.now();
-    eval(jsCode);
-    jsTotal += performance.now() - start;
-  }
+  const values = [interp, js, wasm].map((r) => r.firstValue);
+  const consistent = values.every((v) => v === values[0]);
+  console.log(
+    `\n  resultados: interp=${interp.firstValue} js=${js.firstValue} wasm=${wasm.firstValue} (vm=${vm.firstValue})`
+  );
+  console.log(`  consistente (interp/js/wasm): ${consistent ? "sim" : "não"}`);
 
-  const xsAvg = (xsTotal / ITERATIONS).toFixed(2);
-  const jsAvg = (jsTotal / ITERATIONS).toFixed(2);
-  const ratio = (xsTotal / jsTotal).toFixed(2);
+  console.log("  BENCHMARK: OK\n");
+  return { interp: interp.avg, vm: vm.avg, js: js.avg, wasm: wasm.avg, consistent };
+}
 
-  console.log(`  XanaScript: ${xsAvg}ms (avg)`);
-  console.log(`  JavaScript:  ${jsAvg}ms (avg)`);
-  console.log(`  Ratio:       ${ratio}x (${ratio > 1 ? "slower" : "faster"})`);
-
-  console.log("\n  --- Constant Folding ---");
-  const optCode = "CRIA x = 10 + 20 * 3 + (100 / 5)";
-  const tokens = lex(optCode);
-  let ast = parse(tokens);
-  ast = optimize(ast);
-  const folded = ast.body[0].init;
-  console.log(`  Input:  10 + 20 * 3 + (100 / 5)`);
-  console.log(`  Output: ${folded.value} (folded at compile time)`);
-  console.log(`  Savings: 4 operations eliminated\n`);
-
-  console.log("   XanaScript compiler eliminates constant expressions at compile-time,");
-  console.log("     something raw JS cannot do without a bundler.\n");
+if (process.argv[1] && process.argv[1].replace(/\\/g, "/").endsWith("src/bench.js")) {
+  runBench().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
 }

@@ -3,7 +3,13 @@ import path from "path";
 import { lex } from "./lexer.js";
 import { parse } from "./parser.js";
 import { optimize } from "./optimizer.js";
-import { interpret, AssertionError, ReturnSignal, BreakSignal, ContinueSignal } from "./interpreter.js";
+import {
+  interpret,
+  AssertionError,
+  ReturnSignal,
+  BreakSignal,
+  ContinueSignal,
+} from "./interpreter.js";
 import { createEnv } from "./runtime.js";
 import { setSource, XSError } from "./errors.js";
 
@@ -20,12 +26,12 @@ export async function runTests(dir = ".") {
   const testFiles = findTestFiles(root);
 
   if (testFiles.length === 0) {
-    console.log("  Nenhum arquivo de teste encontrado (*test*.xs)");
+    console.log("  No test files found (*test*.xs)");
     console.log("");
     return;
   }
 
-  console.log(`   ${testFiles.length} arquivo(s) encontrado(s)\n`);
+  console.log(`   ${testFiles.length} file(s) found\n`);
 
   let totalPassed = 0;
   let totalFailed = 0;
@@ -51,7 +57,7 @@ export async function runTests(dir = ".") {
     }
 
     if (results.length === 0) {
-      console.log(`     Nenhum TESTE encontrado`);
+      console.log(`     No TESTs found`);
     }
 
     console.log("");
@@ -59,12 +65,12 @@ export async function runTests(dir = ".") {
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(2);
   console.log("──────────────────────────────────────");
-  console.log(`   ${totalPassed} passaram   ${totalFailed} falharam`);
+  console.log(`   ${totalPassed} passed   ${totalFailed} failed`);
   console.log(`   ${elapsed}s`);
   console.log("");
 
   if (failures.length > 0) {
-    console.log("  Falhas:");
+    console.log("  Failures:");
     for (const f of failures) {
       console.log(`    ${f.file} > ${f.name}: ${f.error}`);
     }
@@ -78,11 +84,9 @@ export async function runTestFile(code, filePath) {
   const env = createEnv(path.dirname(filePath));
   env.__testResults = results;
 
-  env.AFIRMA = (cond) => {
-    if (!cond) throw new AssertionError("AFIRMA recebeu falso");
-  };
-  env.ASSUNTO = (a, b) => {
-    if (a != b) throw new AssertionError(`ASSUNTO falhou: ${JSON.stringify(a)} != ${JSON.stringify(b)}`);
+  env["date"] = (a, b) => {
+    if (a != b)
+      throw new AssertionError(`date failed: ${JSON.stringify(a)} != ${JSON.stringify(b)}`);
   };
 
   try {
@@ -96,7 +100,7 @@ export async function runTestFile(code, filePath) {
       throw e;
     }
     if (!(e instanceof AssertionError)) {
-      results.push({ name: "Erro no arquivo", passed: false, error: e.message });
+      results.push({ name: "File error", passed: false, error: e.message });
     }
   }
 
@@ -112,7 +116,11 @@ function findTestFiles(dir) {
 
     if (entry.isDirectory() && entry.name !== "node_modules" && !entry.name.startsWith(".")) {
       files.push(...findTestFiles(fullPath));
-    } else if (entry.isFile() && entry.name.endsWith(".xs") && entry.name.toLowerCase().includes("test")) {
+    } else if (
+      entry.isFile() &&
+      entry.name.endsWith(".xs") &&
+      entry.name.toLowerCase().includes("test")
+    ) {
       files.push(fullPath);
     }
   }
