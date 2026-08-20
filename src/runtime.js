@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import http from "http";
 import os from "os";
+import crypto from "crypto";
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
 
@@ -252,6 +253,7 @@ export function createEnv(baseDir) {
     isFinite,
     decodeURIComponent,
     encodeURIComponent,
+    Intl,
     "typeof": (v) => typeof v,
     "eh-numero": (v) => typeof v === "number",
     "eh-palavra": (v) => typeof v === "string",
@@ -259,6 +261,13 @@ export function createEnv(baseDir) {
     "eh-objeto": (v) => v !== null && typeof v === "object" && !Array.isArray(v),
     "eh-array": (v) => Array.isArray(v),
     "eh-nulo": (v) => v === null || v === undefined,
+    crypto,
+    require,
+    "erro-novo": (msg) => {
+      throw new XSError(String(msg), {
+        code: buildCode(CATEGORY.RUNT, 1),
+      });
+    },
   };
   for (const [k, v] of Object.entries(jsGlobals)) {
     builtins[k] = v;

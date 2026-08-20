@@ -397,7 +397,7 @@ export async function interpret(node, env) {
         for (const a of node.args) {
           args.push(await interpret(a, env));
         }
-        if (typeof fn === "function") return fn.call(obj, ...args);
+        if (typeof fn === "function") return await fn.call(obj, ...args);
       }
 
       const fn = await interpret(node.callee, env);

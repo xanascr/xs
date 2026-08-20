@@ -4,6 +4,19 @@ Todas as mudanças notáveis do XanaScript.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/), e o versionamento segue [SemVer](https://semver.org/).
 
+## [3.2.0] - 2026-08-20
+
+### Novas features
+
+- **Global `require`**: módulos npm (como `argon2`, `bcryptjs`, `qrcode`) podem ser carregados dentro de pacotes XanaScript.
+- **Global `crypto`**: módulo `crypto` do Node disponível como identificador (usado por pacotes de segurança como `xs-jwt`, `xs-hash`, `xs-crypto`, `xs-otp`).
+- **Global `Intl`**: `Intl.DateTimeFormat` disponível como identificador (usado por `xs-timezone`).
+- **Builtin `erro-novo`**: lança um erro XanaScript (`RUNT-01`) a partir de código de pacote.
+
+### Correções
+
+- **Chamadas de membro assíncronas**: o interpretador agora aguarda (`await`) o resultado de chamadas de método (`objeto.metodo(...)`) quando a função retorna uma Promise, permitindo usar bibliotecas npm assíncronas (argon2, qrcode).
+
 ## [3.1.0] - 2026-08-20
 
 ### Novas features
