@@ -23,6 +23,19 @@ try {
   VERSION = "3.0.0";
 }
 
+const BIN_PREC = {
+  "||": 1, "ou": 1,
+  "&&": 2, "e": 2,
+  "??": 3,
+  "|": 4, "^": 5, "&": 6,
+  "==": 7, "!=": 7, "~=": 7, "===": 7, "!==": 7,
+  "<": 8, "<=": 8, ">": 8, ">=": 8,
+  "<<": 9, ">>": 9,
+  "+": 10, "-": 10,
+  "*": 11, "/": 11, "%": 11,
+  "**": 12,
+};
+
 const [, , rawCmd, ...rawRest] = process.argv;
 
 const CMD_ALIASES = {
@@ -591,6 +604,22 @@ function fmtTypeDecl(node, indent) {
   return `tipo ${node.name} = ${fmtType(node.value)}`;
 }
 
+function fmtExpr(node, indent = 0) {
+  return formatAST(node, indent).replace(/^\s+/, "");
+}
+
+function formatBinary(node, indent) {
+  const prec = BIN_PREC[node.op] ?? 0;
+  const wrap = (child) => {
+    const s = fmtExpr(child, indent);
+    if (child.type === "Binary" && (BIN_PREC[child.op] ?? 0) < prec) {
+      return `(${s})`;
+    }
+    return s;
+  };
+  return `${wrap(node.left)} ${node.op} ${wrap(node.right)}`;
+}
+
 function formatAST(node, indent = 0) {
   const sp = "  ".repeat(indent);
   switch (node.type) {
@@ -601,23 +630,23 @@ function formatAST(node, indent = 0) {
     case "VarDecl": {
       const hint = node.typeHint ? `: ${fmtType(node.typeHint)}` : "";
       const kw = node.kind === "const" ? "lei" : node.kind === "global" ? "fofoca" : "cria";
-      return `${sp}${kw} ${node.id}${hint} = ${formatAST(node.init, indent)}`;
+      return `${sp}${kw} ${node.id}${hint} = ${fmtExpr(node.init, indent)}`;
     }
     case "Assign":
-      return `${sp}${formatAST(node.left, indent)} = ${formatAST(node.right, indent)}`;
+      return `${sp}${fmtExpr(node.left, indent)} = ${fmtExpr(node.right, indent)}`;
     case "IfStmt": {
-      let s = `${sp}se-pah (${formatAST(node.test, indent)}) ${formatAST(node.cons, indent)}`;
+      let s = `${sp}se-pah (${fmtExpr(node.test, indent)}) ${formatAST(node.cons, indent)}`;
       if (node.alt) s += ` ai ${formatAST(node.alt, indent)}`;
       return s;
     }
     case "ForStmt": {
-      const init = node.init ? formatAST(node.init, indent) : "";
-      const test = formatAST(node.test, indent);
-      const update = node.update ? formatAST(node.update, indent) : "";
+      const init = node.init ? fmtExpr(node.init, indent) : "";
+      const test = fmtExpr(node.test, indent);
+      const update = node.update ? fmtExpr(node.update, indent) : "";
       return `${sp}repete-na-moral (${init}; ${test}; ${update}) ${formatAST(node.body, indent)}`;
     }
     case "WhileStmt":
-      return `${sp}repete-enquanto (${formatAST(node.test, indent)}) ${formatAST(node.body, indent)}`;
+      return `${sp}repete-enquanto (${fmtExpr(node.test, indent)}) ${formatAST(node.body, indent)}`;
     case "FunctionDecl": {
       const tparams = node.typeParams ? `<${node.typeParams.join(", ")}>` : "";
       const params = node.params
@@ -633,9 +662,9 @@ function formatAST(node, indent = 0) {
     case "TypeDecl":
       return `${sp}${fmtTypeDecl(node, indent)}`;
     case "ReturnStmt":
-      return `${sp}volta${node.arg ? " " + formatAST(node.arg, indent) : ""}`;
+      return `${sp}volta${node.arg ? " " + fmtExpr(node.arg, indent) : ""}`;
     case "Call": {
-      const args = node.args.map((a) => formatAST(a, indent)).join(", ");
+      const args = node.args.map((a) => fmtExpr(a, indent)).join(", ");
       if (node.callee.type === "Ident") {
         const name = node.callee.name;
         if (name === "grita-ae") return `${sp}grita-ae(${args})`;
@@ -649,24 +678,26 @@ function formatAST(node, indent = 0) {
         if (name === "terminamos!") return `${sp}terminamos!(${args})`;
         return `${sp}${node.callee.name}(${args})`;
       }
-      return `${sp}${formatAST(node.callee, indent)}(${args})`;
+      return `${sp}${fmtExpr(node.callee, indent)}(${args})`;
     }
     case "Member":
-      return `${formatAST(node.obj, indent)}.${node.prop}`;
+      return `${fmtExpr(node.obj, indent)}.${node.prop}`;
     case "OptionalMember":
-      return `${formatAST(node.obj, indent)}?.${node.prop}`;
+      return `${fmtExpr(node.obj, indent)}?.${node.prop}`;
     case "IndexExpr":
-      return `${formatAST(node.obj, indent)}[${formatAST(node.index, indent)}]`;
+      return `${fmtExpr(node.obj, indent)}[${fmtExpr(node.index, indent)}]`;
     case "Binary":
-      return `(${formatAST(node.left, indent)} ${node.op} ${formatAST(node.right, indent)})`;
+      return formatBinary(node, indent);
+    case "UpdateExpr":
+      return node.prefix ? `${node.op}${fmtExpr(node.arg, indent)}` : `${fmtExpr(node.arg, indent)}${node.op}`;
     case "Unary":
-      return `${node.op}${formatAST(node.arg, indent)}`;
+      return `${node.op}${fmtExpr(node.arg, indent)}`;
     case "TypeOf":
-      return `tipo-de(${formatAST(node.arg, indent)})`;
+      return `tipo-de(${fmtExpr(node.arg, indent)})`;
     case "InstanceOf":
-      return `instancia-de(${formatAST(node.arg, indent)}, ${formatAST(node.cls, indent)})`;
+      return `instancia-de(${fmtExpr(node.arg, indent)}, ${fmtExpr(node.cls, indent)})`;
     case "Spread":
-      return `...${formatAST(node.arg, indent)}`;
+      return `...${fmtExpr(node.arg, indent)}`;
     case "Ident":
       return node.name;
     case "Num":
@@ -678,9 +709,9 @@ function formatAST(node, indent = 0) {
     case "Nil":
       return "nulo";
     case "ArrayExpr":
-      return `[${node.items.map((i) => formatAST(i, indent)).join(", ")}]`;
+      return `[${node.items.map((i) => fmtExpr(i, indent)).join(", ")}]`;
     case "ObjectExpr":
-      return `{${node.props.map((p) => (p.spread ? `...${formatAST(p.value, indent)}` : `${p.key}: ${formatAST(p.value, indent)}`)).join(", ")}}`;
+      return `{${node.props.map((p) => (p.spread ? `...${fmtExpr(p.value, indent)}` : `${p.key}: ${fmtExpr(p.value, indent)}`)).join(", ")}}`;
     case "TryCatchStmt": {
       let s = `${sp}tenta ${formatAST(node.tryBlock, indent)}`;
       if (node.catchParam) s += ` fodeu(${node.catchParam}) ${formatAST(node.catchBlock, indent)}`;
@@ -698,7 +729,7 @@ function formatAST(node, indent = 0) {
     case "ContinueStmt":
       return `${sp}segue-o-baile`;
     case "Ternary":
-      return `(${formatAST(node.test, indent)} ? ${formatAST(node.cons, indent)} : ${formatAST(node.alt, indent)})`;
+      return `(${fmtExpr(node.test, indent)} ? ${fmtExpr(node.cons, indent)} : ${fmtExpr(node.alt, indent)})`;
     case "ArrowFunction": {
       const params = node.params
         .map((p, i) => {
@@ -708,12 +739,12 @@ function formatAST(node, indent = 0) {
         })
         .join(", ");
       const ret = node.returnType ? `: ${fmtType(node.returnType)}` : "";
-      return `${node.isAsync ? "assincrono " : ""}(${params})${ret} => ${formatAST(node.body, indent)}`;
+      return `${node.isAsync ? "assincrono " : ""}(${params})${ret} => ${fmtExpr(node.body, indent)}`;
     }
     case "ThisExpr":
       return "esse-cara";
     case "NewExpr":
-      return `novo ${formatAST(node.callee, indent)}`;
+      return `novo ${fmtExpr(node.callee, indent)}`;
     case "ClassDecl": {
       const methods = node.methods
         .map((m) => {
@@ -735,7 +766,7 @@ function formatAST(node, indent = 0) {
     case "TestStmt":
       return `${sp}crush(${JSON.stringify(node.name)}) ${formatAST(node.body, indent)}`;
     case "AssertStmt":
-      return `${sp}deu-match(${formatAST(node.test, indent)})`;
+      return `${sp}deu-match(${fmtExpr(node.test, indent)})`;
     case "TaskDecl":
       return `${sp}tarefa(${JSON.stringify(node.name)}) ${formatAST(node.body, indent)}`;
     case "TableDecl": {
@@ -749,20 +780,20 @@ function formatAST(node, indent = 0) {
         .map((c) =>
           c.test === null
             ? `${sp}  se-nao-der: ${formatAST(c.body, indent + 1)}`
-            : `${sp}  se-for ${formatAST(c.test, indent)}: ${formatAST(c.body, indent + 1)}`
+            : `${sp}  se-for ${fmtExpr(c.test, indent)}: ${formatAST(c.body, indent + 1)}`
         )
         .join("\n");
-      return `${sp}vai-de (${formatAST(node.test, indent)}) {\n${cases}\n${sp}}`;
+      return `${sp}vai-de (${fmtExpr(node.test, indent)}) {\n${cases}\n${sp}}`;
     }
     case "MatchExpr": {
       const cases = node.cases
         .map((c) =>
           c.pattern === null
             ? `${sp}  qualquer-coisa: ${formatAST(c.body, indent + 1)}`
-            : `${sp}  bateu-com ${formatAST(c.pattern, indent)}: ${formatAST(c.body, indent + 1)}`
+            : `${sp}  bateu-com ${fmtExpr(c.pattern, indent)}: ${formatAST(c.body, indent + 1)}`
         )
         .join("\n");
-      return `${sp}ve-se (${formatAST(node.test, indent)}) {\n${cases}\n${sp}}`;
+      return `${sp}ve-se (${fmtExpr(node.test, indent)}) {\n${cases}\n${sp}}`;
     }
     default:
       return `${sp}`;

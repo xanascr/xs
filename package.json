@@ -1,6 +1,6 @@
 {
   "name": "xanascript",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "Programming language with Portuguese syntax, optimizing compiler, built-in ORM, and WebAssembly support",
   "type": "module",
   "workspaces": [

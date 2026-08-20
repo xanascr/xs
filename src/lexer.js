@@ -101,6 +101,14 @@ export function lex(input, file = "input.xs") {
       col++;
       let val = "";
       while (i < input.length && input[i] !== q) {
+        if (input[i] === "\\" && i + 1 < input.length && input[i + 1] !== "\n") {
+          const esc = input[i + 1];
+          const map = { n: "\n", t: "\t", r: "\r", '"': '"', "'": "'", "\\": "\\", b: "\b", f: "\f", "0": "\0" };
+          val += map[esc] !== undefined ? map[esc] : esc;
+          i += 2;
+          col += 2;
+          continue;
+        }
         if (input[i] === "\n") {
           line++;
           col = 1;

@@ -1131,9 +1131,13 @@ export function parse(tokens) {
             props.push({ spread: true, value: spread });
           } else {
             const key = parsePropName();
-            expect(":");
-            const value = parseExpr();
-            props.push({ key, value });
+            if (peek().type === ":") {
+              next();
+              const value = parseExpr();
+              props.push({ key, value });
+            } else {
+              props.push({ key, value: A.Ident(key) });
+            }
           }
           if (peek().type !== ",") break;
           next();

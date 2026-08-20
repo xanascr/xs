@@ -153,11 +153,20 @@ export function createEnv(baseDir) {
         } else {
           const xsPkgDir = path.join(baseDir, "node_modules", mod);
           const xsPkgFile = path.join(xsPkgDir, "bglh.json");
+          const xsCacheDir = path.join(
+            process.env.HOME || process.env.USERPROFILE || ".",
+            ".xs",
+            "packages",
+            mod
+          );
+          const xsCacheFile = path.join(xsCacheDir, "bglh.json");
 
-          if (fs.existsSync(xsPkgFile)) {
-            const pkgMeta = JSON.parse(fs.readFileSync(xsPkgFile, "utf-8"));
-            full = path.resolve(xsPkgDir, pkgMeta.main || "src/index.xs");
-            if (!fs.existsSync(full)) full = path.resolve(xsPkgDir, "src/index.xs");
+          const xsPkgRoot = fs.existsSync(xsPkgFile) ? xsPkgDir : fs.existsSync(xsCacheFile) ? xsCacheDir : null;
+
+          if (xsPkgRoot) {
+            const pkgMeta = JSON.parse(fs.readFileSync(path.join(xsPkgRoot, "bglh.json"), "utf-8"));
+            full = path.resolve(xsPkgRoot, pkgMeta.main || "src/index.xs");
+            if (!fs.existsSync(full)) full = path.resolve(xsPkgRoot, "src/index.xs");
           } else {
             try {
               let localPath = path.join(baseDir, "node_modules", mod);
@@ -213,6 +222,48 @@ export function createEnv(baseDir) {
     },
   };
   builtins.__dir = baseDir;
+
+  const jsGlobals = {
+    Object,
+    Array,
+    JSON,
+    Math,
+    Number,
+    String,
+    Boolean,
+    Date,
+    Buffer,
+    Uint8Array,
+    Int8Array,
+    Int16Array,
+    Int32Array,
+    Uint16Array,
+    Uint32Array,
+    Float32Array,
+    Float64Array,
+    ArrayBuffer,
+    DataView,
+    RegExp,
+    Error,
+    TypeError,
+    parseInt,
+    parseFloat,
+    isNaN,
+    isFinite,
+    decodeURIComponent,
+    encodeURIComponent,
+    "typeof": (v) => typeof v,
+    "eh-numero": (v) => typeof v === "number",
+    "eh-palavra": (v) => typeof v === "string",
+    "eh-booleano": (v) => typeof v === "boolean",
+    "eh-objeto": (v) => v !== null && typeof v === "object" && !Array.isArray(v),
+    "eh-array": (v) => Array.isArray(v),
+    "eh-nulo": (v) => v === null || v === undefined,
+  };
+  for (const [k, v] of Object.entries(jsGlobals)) {
+    builtins[k] = v;
+  }
+
   return builtins;
 }
 

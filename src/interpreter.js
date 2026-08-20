@@ -245,9 +245,9 @@ export async function interpret(node, env) {
         case "**":
           return l ** r;
         case "==":
-          return l === r;
+          return l == r;
         case "!=":
-          return l !== r;
+          return l != r;
         case "===":
           return l === r;
         case "!==":

@@ -74,7 +74,7 @@ export async function loginUser() {
     const res = await fetch(`${XS_REGISTRY}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email: username, username, password }),
     });
     const data = await res.json();
     if (!data.ok) {
@@ -178,7 +178,7 @@ export async function publishPackage() {
   const srcDir = path.join(path.dirname(pkgFile), "src");
   const files = [];
   if (fs.existsSync(srcDir)) {
-    collectFiles(srcDir, srcDir, files);
+    collectFiles(path.dirname(pkgFile), srcDir, files);
   }
 
   // Create a simple tar.gz
@@ -193,10 +193,10 @@ export async function publishPackage() {
   formData.append("description", pkg.description || "");
   formData.append("license", pkg.license || "MIT");
   formData.append("repository", pkg.repository || "");
-  formData.append("keywords", JSON.stringify(pkgJson.keywords || []));
+  formData.append("keywords", (pkgJson.keywords || []).join(","));
   formData.append("readme", readme);
   formData.append(
-    "file",
+    "tarball",
     new Blob([tarBuffer], { type: "application/gzip" }),
     `${pkg.name}-${pkg.version}.tar.gz`
   );
@@ -514,7 +514,7 @@ function findReadme(dir) {
 function collectFiles(baseDir, dir, files) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    const rel = path.relative(baseDir, full);
+    const rel = path.relative(baseDir, full).split(path.sep).join("/");
     if (entry.isDirectory()) {
       collectFiles(baseDir, full, files);
     } else {
@@ -545,11 +545,13 @@ async function createTarball(baseDir, files) {
       .padStart(11, "0");
     header.write(mtime, 136, 11, "utf-8"); // mtime
 
-    // Checksum
+    // Checksum: field must be 8 spaces while summing (per tar spec)
+    header.fill(0x20, 148, 156);
     let checksum = 0;
     for (let i = 0; i < 512; i++) checksum += header[i];
     const checksumStr = checksum.toString(8).padStart(6, "0");
     header.write(checksumStr, 148, 6, "utf-8");
+    header[154] = 0x00; // NUL terminator
     header[155] = 0x20; // space after checksum
 
     chunks.push(header);
